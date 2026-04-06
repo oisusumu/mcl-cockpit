@@ -979,63 +979,26 @@ body {
         </div>
 
         <!-- ===== 中期方向性 ===== -->
-        <div class="card grid-full">
+        <div class="card grid-full" id="direction-card">
             <div class="card-header">
                 <h2>中期で見えている方向性</h2>
                 <span style="font-size:11px; color:#64748b;">2026年4月時点</span>
             </div>
-
             <div class="delete-bar">
-                <button class="btn-restore" onclick="restoreAll(this)">全解除</button>
-                <button class="btn-delete" onclick="deleteChecked(this)">チェック項目を削除</button>
+                <button class="btn-add" onclick="dirAdd()">＋ 追加</button>
+                <button class="btn-restore" onclick="dirRestoreAll()">全解除</button>
+                <button class="btn-delete" onclick="dirDeleteChecked()">チェック項目を削除</button>
             </div>
             <table class="direction-table">
                 <thead>
                     <tr>
                         <th style="width:30px;"></th>
                         <th>テーマ</th>
-                        <th>及川さんの言葉</th>
-                        <th>やりたいこと</th>
+                        <th>やりたいこと・方向性</th>
                         <th>ステータス</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr class="deletable" data-id="dir-onboard">
-                        <td><input type="checkbox" style="position:static; width:16px; height:16px; accent-color:#ef4444;"></td>
-                        <td>オンボーディング</td>
-                        <td><span class="direction-quote">「1番大事」「落とさない」「丁寧に」</span></td>
-                        <td>新規顧問先・岩倉さんのオンボーディングを丁寧にやる</td>
-                        <td><span class="tag tag-client" style="font-size:11px;">最優先</span></td>
-                    </tr>
-                    <tr class="deletable" data-id="dir-ai-saas">
-                        <td><input type="checkbox" style="position:static; width:16px; height:16px; accent-color:#ef4444;"></td>
-                        <td>AI+SaaS事業</td>
-                        <td><span class="direction-quote">「アプリに」「研修を組み込む」</span></td>
-                        <td>AI研修を含んだSaaS提供。バックエンドは企業DCに置く。</td>
-                        <td><span class="tag tag-keiei" style="font-size:11px;">方向性決定</span></td>
-                    </tr>
-                    <tr class="deletable" data-id="dir-keiei-plan">
-                        <td><input type="checkbox" style="position:static; width:16px; height:16px; accent-color:#ef4444;"></td>
-                        <td>経営計画の再策定</td>
-                        <td><span class="direction-quote">「事業ドメインを見失わないで」</span></td>
-                        <td>経営計画を再度作成。「仕組みで社会を解決する」を旗にする。</td>
-                        <td><span class="tag tag-keiei" style="font-size:11px;">着手待ち</span></td>
-                    </tr>
-                    <tr class="deletable" data-id="dir-ai-choice">
-                        <td><input type="checkbox" style="position:static; width:16px; height:16px; accent-color:#ef4444;"></td>
-                        <td>AIの選び方</td>
-                        <td><span class="direction-quote">「絞って複数個使う」</span></td>
-                        <td>Perplexity / Claude Code / ChatGPT・Gemini / Cursor</td>
-                        <td><span style="color:#22c55e; font-size:11px; font-weight:700;">確定</span></td>
-                    </tr>
-                    <tr class="deletable" data-id="dir-legaseed">
-                        <td><input type="checkbox" style="position:static; width:16px; height:16px; accent-color:#ef4444;"></td>
-                        <td>Legaseed清水さん連携</td>
-                        <td><span class="direction-quote">「大きなシェアを取りに行く」</span></td>
-                        <td>東京拠点・DC×採用支援の連携。中長期パートナーシップ構築。</td>
-                        <td><span class="tag tag-keiei" style="font-size:11px;">進行中</span></td>
-                    </tr>
-                </tbody>
+                <tbody id="direction-tbody"></tbody>
             </table>
         </div>
 
@@ -1422,6 +1385,97 @@ function alertDeleteChecked() {
 
 // 初期表示
 alertRenderAll();
+
+// ===== 中期方向性 =====
+const DIR_STORAGE_KEY = 'cockpit-directions';
+const DIR_STATUSES = ['最優先', '方向性決定', '着手待ち', '進行中', '確定', '完了'];
+const DIR_STATUS_STYLES = {
+    '最優先': 'background:#dc2626; color:#fff;',
+    '方向性決定': 'background:#1e40af; color:#93c5fd;',
+    '着手待ち': 'background:#92400e; color:#fbbf24;',
+    '進行中': 'background:#065f46; color:#6ee7b7;',
+    '確定': 'background:none; color:#22c55e; font-weight:700;',
+    '完了': 'background:#22c55e; color:#fff;',
+};
+
+// 初期データ（localStorage未設定時のみ使用）
+var DIR_DEFAULT = [
+    { id: 'dir-onboard', theme: 'オンボーディング', desc: '新規顧問先・岩倉さんのオンボーディングを丁寧にやる', status: '最優先' },
+    { id: 'dir-ai-saas', theme: 'AI+SaaS事業', desc: 'AI研修を含んだSaaS提供。バックエンドは企業DCに置く。', status: '方向性決定' },
+    { id: 'dir-keiei-plan', theme: '経営計画の再策定', desc: '経営計画を再度作成。「仕組みで社会を解決する」を旗にする。', status: '着手待ち' },
+    { id: 'dir-ai-choice', theme: 'AIの選び方', desc: 'Perplexity / Claude Code / ChatGPT・Gemini / Cursor', status: '確定' },
+    { id: 'dir-legaseed', theme: 'Legaseed清水さん連携', desc: '東京拠点・DC×採用支援の連携。中長期パートナーシップ構築。', status: '進行中' },
+];
+
+function getDirData() {
+    try {
+        var data = localStorage.getItem(DIR_STORAGE_KEY);
+        if (!data) { saveDirData(DIR_DEFAULT); return DIR_DEFAULT; }
+        return JSON.parse(data);
+    } catch { saveDirData(DIR_DEFAULT); return DIR_DEFAULT; }
+}
+function saveDirData(arr) { localStorage.setItem(DIR_STORAGE_KEY, JSON.stringify(arr)); }
+
+function dirRenderAll() {
+    var items = getDirData();
+    var tbody = document.getElementById('direction-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    items.forEach(function(item) {
+        var tr = document.createElement('tr');
+        tr.className = 'deletable';
+        tr.setAttribute('data-id', item.id);
+        var style = DIR_STATUS_STYLES[item.status] || 'color:#94a3b8;';
+        tr.innerHTML = '<td><input type="checkbox" style="position:static; width:16px; height:16px; accent-color:#ef4444;"></td>'
+            + '<td>' + escHtml(item.theme) + '</td>'
+            + '<td>' + escHtml(item.desc) + '</td>'
+            + '<td><span style="font-size:11px; padding:2px 8px; border-radius:4px; cursor:pointer; ' + style + '" onclick="dirCycleStatus(\'' + item.id + '\')" title="クリックで変更">' + escHtml(item.status) + '</span></td>';
+        tbody.appendChild(tr);
+    });
+}
+
+function dirCycleStatus(id) {
+    var items = getDirData();
+    for (var i = 0; i < items.length; i++) {
+        if (items[i].id === id) {
+            var idx = DIR_STATUSES.indexOf(items[i].status);
+            items[i].status = DIR_STATUSES[(idx + 1) % DIR_STATUSES.length];
+            break;
+        }
+    }
+    saveDirData(items);
+    dirRenderAll();
+}
+
+function dirAdd() {
+    var theme = prompt('テーマ：');
+    if (!theme || !theme.trim()) return;
+    var desc = prompt('やりたいこと・方向性：') || '';
+    var items = getDirData();
+    items.push({ id: 'dir-' + Date.now(), theme: theme.trim(), desc: desc.trim(), status: '着手待ち' });
+    saveDirData(items);
+    dirRenderAll();
+}
+
+function dirDeleteChecked() {
+    var tbody = document.getElementById('direction-tbody');
+    var checked = tbody.querySelectorAll('.deletable input[type="checkbox"]:checked');
+    if (checked.length === 0) return;
+    var items = getDirData();
+    checked.forEach(function(cb) {
+        var id = cb.closest('.deletable').getAttribute('data-id');
+        items = items.filter(function(it) { return it.id !== id; });
+    });
+    saveDirData(items);
+    dirRenderAll();
+}
+
+function dirRestoreAll() {
+    var tbody = document.getElementById('direction-tbody');
+    tbody.querySelectorAll('input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
+}
+
+dirRenderAll();
 
 // ===== オンボーディング ステータス・プログレス切替 =====
 const OB_STORAGE_KEY = 'cockpit-onboard-state';
