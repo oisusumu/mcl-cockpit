@@ -1721,14 +1721,23 @@ function onTokenResponse(resp) {
 
 async function fetchAllData() {
     updateSyncBtn('同期中...', '#f59e0b');
-    try {
-        await Promise.all([fetchCalendarEvents(), fetchTasks(), fetchGmail()]);
-        var now = new Date();
-        var timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    var results = await Promise.allSettled([
+        fetchCalendarEvents(),
+        fetchTasks(),
+        fetchGmail()
+    ]);
+    var failed = [];
+    if (results[0].status === 'rejected') { console.error('Calendar:', results[0].reason); failed.push('Cal'); }
+    if (results[1].status === 'rejected') { console.error('Tasks:', results[1].reason); failed.push('Tasks'); }
+    if (results[2].status === 'rejected') { console.error('Gmail:', results[2].reason); failed.push('Gmail'); }
+    var now = new Date();
+    var timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    if (failed.length === 0) {
         updateSyncBtn('同期済 ' + timeStr, '#22c55e');
-    } catch(e) {
-        console.error(e);
-        updateSyncBtn('同期エラー', '#ef4444');
+    } else if (failed.length === 3) {
+        updateSyncBtn('全エラー: ' + failed.join(','), '#ef4444');
+    } else {
+        updateSyncBtn('一部済 ' + timeStr + ' (NG:' + failed.join(',') + ')', '#f59e0b');
     }
 }
 
