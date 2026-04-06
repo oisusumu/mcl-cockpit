@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>及川進のコックピット｜MCLグループ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 20px;
+}
+.dashboard { max-width: 1400px; margin: 0 auto; }
+
+/* ヘッダー */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 20px 28px;
+    background: linear-gradient(135deg, #1e293b, #334155);
+    border-radius: 16px;
+    border: 1px solid #334155;
+}
+.header h1 { font-size: 22px; color: #fff; }
+.header h1 span { color: #60a5fa; }
+.header-meta { text-align: right; font-size: 13px; color: #94a3b8; }
+.header-meta .date { font-size: 18px; color: #f1f5f9; font-weight: 700; }
+
+/* グリッド */
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+.grid-full { grid-column: 1 / -1; }
+
+/* カード */
+.card {
+    background: #1e293b;
+    border-radius: 14px;
+    padding: 24px;
+    border: 1px solid #334155;
+}
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #334155;
+}
+.card-header h2 {
+    font-size: 16px;
+    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.card-header .count {
+    background: #3b82f6;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* タスク */
+.task {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    transition: background 0.2s;
+}
+.task:hover { background: #334155; }
+.task-priority {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+}
+.priority-high { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+.priority-mid { background: #f59e0b; }
+.priority-low { background: #22c55e; }
+.task-content { flex: 1; }
+.task-title { font-size: 14px; color: #e2e8f0; }
+.task-meta { font-size: 11px; color: #64748b; margin-top: 2px; }
+.task-done .task-title { text-decoration: line-through; color: #64748b; }
+.tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 4px;
+    margin-left: 6px;
+}
+.tag-keiri { background: #065f46; color: #6ee7b7; }
+.tag-keiei { background: #1e3a5f; color: #93c5fd; }
+.tag-schedule { background: #4c1d95; color: #c4b5fd; }
+.tag-client { background: #7c2d12; color: #fdba74; }
+.tag-hr { background: #831843; color: #f9a8d4; }
+
+/* アラート */
+.alert-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+.alert-danger {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+.alert-warn {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fcd34d;
+}
+.alert-info {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #93c5fd;
+}
+.alert-days {
+    font-size: 20px;
+    font-weight: 800;
+    min-width: 36px;
+    text-align: center;
+}
+.alert-danger .alert-days { color: #ef4444; }
+.alert-warn .alert-days { color: #f59e0b; }
+
+/* オンボーディング */
+.onboard-item {
+    padding: 14px;
+    border-radius: 10px;
+    background: #0f172a;
+    margin-bottom: 10px;
+    border: 1px solid #334155;
+}
+.onboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.onboard-name { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+.onboard-status {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 10px;
+}
+.status-active { background: #22c55e; color: #052e16; }
+.status-pending { background: #f59e0b; color: #451a03; }
+.status-planned { background: #3b82f6; color: #1e3a5f; }
+.onboard-progress {
+    background: #334155;
+    border-radius: 6px;
+    height: 6px;
+    overflow: hidden;
+    margin: 8px 0 6px;
+}
+.onboard-bar {
+    height: 100%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+.onboard-detail { font-size: 12px; color: #94a3b8; }
+
+/* 方向性テーブル */
+.direction-table {
+    width: 100%;
+    font-size: 13px;
+    border-collapse: collapse;
+}
+.direction-table th {
+    text-align: left;
+    padding: 8px 10px;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 700;
+    border-bottom: 1px solid #334155;
+}
+.direction-table td {
+    padding: 10px;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    color: #cbd5e1;
+    vertical-align: top;
+}
+.direction-table td:first-child {
+    font-weight: 700;
+    color: #60a5fa;
+    white-space: nowrap;
+}
+.direction-quote {
+    font-style: italic;
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+/* 完了済み */
+.done-list { color: #64748b; font-size: 13px; }
+.done-list li { margin-bottom: 4px; list-style: none; padding-left: 20px; position: relative; }
+.done-list li::before { content: "✓"; position: absolute; left: 0; color: #22c55e; font-weight: 700; }
+
+/* KPI */
+.kpi-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.kpi {
+    flex: 1;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+}
+.kpi-value { font-size: 28px; font-weight: 800; color: #f1f5f9; }
+.kpi-label { font-size: 11px; color: #64748b; margin-top: 4px; }
+.kpi-accent { color: #3b82f6; }
+.kpi-warn { color: #f59e0b; }
+.kpi-danger { color: #ef4444; }
+
+/* 更新情報 */
+.update-info {
+    text-align: center;
+    padding: 16px;
+    color: #475569;
+    font-size: 11px;
+}
+
+/* 月間カレンダー */
+.cal-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.cal-nav h2 { font-size: 18px; color: #f1f5f9; }
+.cal-nav-btn {
+    background: #334155;
+    color: #e2e8f0;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    padding: 6px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.cal-nav-btn:hover { background: #475569; }
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.cal-dow {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    padding: 6px 0;
+}
+.cal-dow-sun { color: #f87171; }
+.cal-dow-sat { color: #60a5fa; }
+.cal-cell {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    min-height: 100px;
+    padding: 4px;
+    vertical-align: top;
+    font-size: 11px;
+}
+.cal-cell-other { opacity: 0.3; }
+.cal-cell-today { border: 2px solid #3b82f6; background: #1e293b; }
+.cal-date {
+    font-size: 13px;
+    font-weight: 700;
+    color: #94a3b8;
+    padding: 2px 4px;
+    margin-bottom: 2px;
+}
+.cal-cell-today .cal-date { color: #60a5fa; }
+.cal-cell-sun .cal-date { color: #f87171; }
+.cal-cell-sat .cal-date { color: #60a5fa; }
+.cal-event {
+    background: #334155;
+    border-radius: 3px;
+    padding: 1px 4px;
+    margin-bottom: 1px;
+    color: #cbd5e1;
+    font-size: 10px;
+    line-height: 1.4;
+    overflow: visible;
+    white-space: normal;
+    word-break: break-all;
+}
+.cal-event-time { color: #60a5fa; font-weight: 600; }
+.cal-event-important { background: #7c2d12; color: #fdba74; }
+.cal-event-bni { background: #4c1d95; color: #c4b5fd; }
+.cal-event-trip { background: #065f46; color: #6ee7b7; }
+.cal-month { display: none; }
+.cal-month.active { display: block; }
+
+@media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+    .kpi-row { flex-direction: column; }
+}
+@media print {
+    body { background: #fff; color: #333; }
+    .card { background: #f8fafc; border: 1px solid #ddd; }
+    .header { background: #1e293b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<div class="dashboard">
+
+    <!-- ヘッダー -->
+    <div class="header">
+        <div>
+            <h1><span>COCKPIT</span>｜及川 進</h1>
+            <p style="font-size:12px; color:#64748b; margin-top:4px;">MCLグループ CEO｜社会保険労務士法人ロームホーム 代表</p>
+        </div>
+        <div class="header-meta">
+            <div class="date">2026年4月6日（月）</div>
+            <div>最終更新：16:00</div>
+        </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-row">
+        <div class="kpi">
+            <div class="kpi-value kpi-accent">100+</div>
+            <div class="kpi-label">顧問先数</div>
+        </div>
+        <div class="kpi">
+            <div class="kpi-value kpi-warn">7</div>
+            <div class="kpi-label">未完了タスク</div>
+        </div>
+        <div class="kpi">
+            <div class="kpi-value kpi-danger">1</div>
+            <div class="kpi-label">未連絡アラート</div>
+        </div>
+        <div class="kpi">
+            <div class="kpi-value" style="color:#22c55e;">3</div>
+            <div class="kpi-label">本日完了</div>
+        </div>
+    </div>
+
+    <!-- 月間カレンダー -->
+    <div class="card" style="margin-bottom:20px;">
+        <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="changeMonth(-1)">&lt; 前月</button>
+            <h2 id="calTitle">2026年4月</h2>
+            <button class="cal-nav-btn" onclick="changeMonth(1)">翌月 &gt;</button>
+        </div>
+
+        <div id="calContainer">
+        <!-- 2026年4月 -->
+        <div class="cal-month active" data-month="2026-04">
+            <div class="cal-grid">
+                <div class="cal-dow cal-dow-sun">日</div><div class="cal-dow">月</div><div class="cal-dow">火</div><div class="cal-dow">水</div><div class="cal-dow">木</div><div class="cal-dow">金</div><div class="cal-dow cal-dow-sat">土</div>
+
+                <!-- Week 1: 4/1(水)〜4/4(土) -->
+                <div class="cal-cell cal-cell-other"></div>
+                <div class="cal-cell cal-cell-other"></div>
+                <div class="cal-cell cal-cell-other"></div>
+                <div class="cal-cell">
+                    <div class="cal-date">1</div>
+                    <div class="cal-event cal-event-important"><span class="cal-event-time">01:00</span> DC導入2社（グローアップ・OKエンタ）</div>
+                    <div class="cal-event"><span class="cal-event-time">07:00</span> 森林クリニック</div>
+                    <div class="cal-event"><span class="cal-event-time">10:00</span> 元町ガスト</div>
+                    <div class="cal-event"><span class="cal-event-time">14:00</span> 南さん NDCミーティング</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">2</div>
+                    <div class="cal-event"><span class="cal-event-time">08:00</span> クライアント向け勉強会送信</div>
+                    <div class="cal-event cal-event-important"><span class="cal-event-time">08:30</span> DC放置警告</div>
+                    <div class="cal-event"><span class="cal-event-time">13:00</span> 日浦さん打合せ</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">3</div>
+                    <div class="cal-event"><span class="cal-event-time">09:30</span> 経営会議</div>
+                    <div class="cal-event"><span class="cal-event-time">11:00</span> LABミーティング</div>
+                    <div class="cal-event"><span class="cal-event-time">14:00</span> Legaseed清水さんMTG</div>
+                </div>
+                <div class="cal-cell cal-cell-sat">
+                    <div class="cal-date">4</div>
+                    <div class="cal-event" style="color:#64748b;">淡路島旅行</div>
+                </div>
+
+                <!-- Week 2: 4/5(日)〜4/11(土) -->
+                <div class="cal-cell cal-cell-sun">
+                    <div class="cal-date">5</div>
+                    <div class="cal-event">リファラル</div>
+                </div>
+                <div class="cal-cell cal-cell-today">
+                    <div class="cal-date">6</div>
+                    <div class="cal-event"><span class="cal-event-time">09:00</span> 就業規則（米澤他）</div>
+                    <div class="cal-event cal-event-important"><span class="cal-event-time">09:30</span> プルデンタル渡さん</div>
+                    <div class="cal-event"><span class="cal-event-time">10:30</span> お金周り整理</div>
+                    <div class="cal-event"><span class="cal-event-time">12:00</span> ソーシャルビジネスPT</div>
+                    <div class="cal-event"><span class="cal-event-time">13:00</span> 週礼</div>
+                    <div class="cal-event cal-event-important"><span class="cal-event-time">14:00</span> 菊地様来所（介護）</div>
+                    <div class="cal-event"><span class="cal-event-time">16:30</span> HRビズ報告作成</div>
+                    <div class="cal-event"><span class="cal-event-time">17:00</span> 岩倉さんオンボーディング</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">7</div>
+                    <div class="cal-event cal-event-bni"><span class="cal-event-time">05:00</span> BNI TRES STELLAS</div>
+                    <div class="cal-event"><span class="cal-event-time">11:00</span> TOURI森さんDC説明</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">8</div>
+                    <div class="cal-event"><span class="cal-event-time">09:00</span> DC塾実績報告</div>
+                    <div class="cal-event"><span class="cal-event-time">11:00</span> グローアップ志村さん</div>
+                    <div class="cal-event"><span class="cal-event-time">13:30</span> DC横浜パートナーMTG</div>
+                    <div class="cal-event"><span class="cal-event-time">16:30</span> たんぽぽ小児科</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">9</div>
+                    <div class="cal-event"><span class="cal-event-time">10:00</span> 東京支社 助成金勉強会</div>
+                    <div class="cal-event"><span class="cal-event-time">14:45</span> 萌佑会 西田課長MTG</div>
+                    <div class="cal-event"><span class="cal-event-time">18:00</span> リージョンフォーラム</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">10</div>
+                    <div class="cal-event"><span class="cal-event-time">11:00</span> LABミーティング</div>
+                    <div class="cal-event"><span class="cal-event-time">13:00</span> TOURI森さん</div>
+                    <div class="cal-event"><span class="cal-event-time">15:00</span> OKエンタ岡本さん</div>
+                    <div class="cal-event"><span class="cal-event-time">17:30</span> サンエフピー</div>
+                </div>
+                <div class="cal-cell cal-cell-sat">
+                    <div class="cal-date">11</div>
+                </div>
+
+                <!-- Week 3: 4/12(日)〜4/18(土) -->
+                <div class="cal-cell cal-cell-sun">
+                    <div class="cal-date">12</div>
+                    <div class="cal-event">リファラル</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">13</div>
+                    <div class="cal-event"><span class="cal-event-time">12:00</span> ソーシャルビジネスPT</div>
+                    <div class="cal-event"><span class="cal-event-time">13:00</span> 週礼</div>
+                    <div class="cal-event"><span class="cal-event-time">15:00</span> 太郎さん</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">14</div>
+                    <div class="cal-event cal-event-bni"><span class="cal-event-time">05:00</span> BNI TRES STELLAS</div>
+                    <div class="cal-event"><span class="cal-event-time">13:00</span> HJP MCL東京取締役会</div>
+                    <div class="cal-event"><span class="cal-event-time">14:00</span> ファミール内科コンサル</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">15</div>
+                    <div class="cal-event cal-event-important"><span class="cal-event-time">10:00</span> イワクラ訪問</div>
+                    <div class="cal-event"><span class="cal-event-time">15:00</span> kFCミーティング</div>
+                    <div class="cal-event"><span class="cal-event-time">16:00</span> DIG・アーリークロス・ミナジン来道</div>
+                    <div class="cal-event"><span class="cal-event-time">16:30</span> DC塾 偶数月</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">16</div>
+                    <div class="cal-event"><span class="cal-event-time">10:30</span> 新・DC攻略会議</div>
+                    <div class="cal-event"><span class="cal-event-time">13:00</span> クライアント向け勉強会Web</div>
+                </div>
+                <div class="cal-cell cal-cell-trip">
+                    <div class="cal-date">17</div>
+                    <div class="cal-event cal-event-trip">徳島高松出張</div>
+                    <div class="cal-event"><span class="cal-event-time">11:00</span> LABミーティング</div>
+                </div>
+                <div class="cal-cell cal-cell-sat">
+                    <div class="cal-date">18</div>
+                    <div class="cal-event cal-event-trip">徳島高松出張</div>
+                </div>
+
+                <!-- Week 4: 4/19(日)〜4/25(土) -->
+                <div class="cal-cell cal-cell-sun">
+                    <div class="cal-date">19</div>
+                    <div class="cal-event cal-event-trip">徳島高松出張</div>
+                    <div class="cal-event">リファラル</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">20</div>
+                    <div class="cal-event"><span class="cal-event-time">11:00</span> 船井 社労士研</div>
+                    <div class="cal-event"><span class="cal-event-time">12:00</span> ソーシャルビジネスPT</div>
+                    <div class="cal-event"><span class="cal-event-time">13:00</span> 週礼</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">21</div>
+                    <div class="cal-event cal-event-bni"><span class="cal-event-time">05:00</span> BNI TRES STELLAS</div>
+                    <div class="cal-event"><span class="cal-event-time">15:00</span> モテコロ 星さん-木村さん</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">22</div>
+                    <div class="cal-event"><span class="cal-event-time">07:00</span> 耳鼻科・歯科・カット・皮膚科</div>
+                    <div class="cal-event"><span class="cal-event-time">13:00</span> 小原さんMTG</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">23</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">24</div>
+                    <div class="cal-event"><span class="cal-event-time">11:00</span> LABミーティング</div>
+                    <div class="cal-event"><span class="cal-event-time">14:00</span> BNI 1to1 山﨑さん</div>
+                    <div class="cal-event"><span class="cal-event-time">17:00</span> 宮本さん 121</div>
+                </div>
+                <div class="cal-cell cal-cell-sat">
+                    <div class="cal-date">25</div>
+                </div>
+
+                <!-- Week 5: 4/26(日)〜4/30(木) -->
+                <div class="cal-cell cal-cell-sun">
+                    <div class="cal-date">26</div>
+                    <div class="cal-event">リファラル</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">27</div>
+                    <div class="cal-event"><span class="cal-event-time">12:00</span> ソーシャルビジネスPT</div>
+                    <div class="cal-event"><span class="cal-event-time">13:00</span> 週礼</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">28</div>
+                    <div class="cal-event cal-event-bni"><span class="cal-event-time">05:00</span> BNI TRES STELLAS</div>
+                    <div class="cal-event"><span class="cal-event-time">14:00</span> ファミール内科 組織コンサル</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">29</div>
+                </div>
+                <div class="cal-cell">
+                    <div class="cal-date">30</div>
+                </div>
+                <div class="cal-cell cal-cell-other"></div>
+                <div class="cal-cell cal-cell-other"></div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <div class="grid">
+
+        <!-- ===== 本日のタスク ===== -->
+        <div class="card">
+            <div class="card-header">
+                <h2>本日のタスク</h2>
+                <span class="count">7 残</span>
+            </div>
+
+            <div class="task">
+                <div class="task-priority priority-high"></div>
+                <div class="task-content">
+                    <div class="task-title">ジョイント工業会社に連絡（DC放置35日）<span class="tag tag-client">顧問先</span></div>
+                    <div class="task-meta">08:30 — DC放置警告</div>
+                </div>
+            </div>
+
+            <div class="task">
+                <div class="task-priority priority-high"></div>
+                <div class="task-content">
+                    <div class="task-title">プルデンタル渡さんに連絡<span class="tag tag-keiei">経営</span></div>
+                    <div class="task-meta">09:30</div>
+                </div>
+            </div>
+
+            <div class="task">
+                <div class="task-priority priority-mid"></div>
+                <div class="task-content">
+                    <div class="task-title">お金周りの整理（HRビズ・HP代・見積もり）<span class="tag tag-keiri">経理</span></div>
+                    <div class="task-meta">10:30 — 1時間枠</div>
+                </div>
+            </div>
+
+            <div class="task">
+                <div class="task-priority priority-mid"></div>
+                <div class="task-content">
+                    <div class="task-title">出張予定組み（緒方さん・新里さん調整）<span class="tag tag-schedule">スケジュール</span></div>
+                    <div class="task-meta">11:30</div>
+                </div>
+            </div>
+
+            <div class="task">
+                <div class="task-priority priority-mid"></div>
+                <div class="task-content">
+                    <div class="task-title">HRビズ進捗報告作成（評価制度の一次報告）<span class="tag tag-keiei">経営</span></div>
+                    <div class="task-meta">16:30</div>
+                </div>
+            </div>
+
+            <div class="task">
+                <div class="task-priority priority-mid"></div>
+                <div class="task-content">
+                    <div class="task-title">北洋→北海道銀行スイッチング判断整理<span class="tag tag-keiri">経理</span></div>
+                    <div class="task-meta">18:00</div>
+                </div>
+            </div>
+
+            <div class="task">
+                <div class="task-priority priority-low"></div>
+                <div class="task-content">
+                    <div class="task-title">三友・曙・フジプラ・イケスギ・吉岡さん対応<span class="tag tag-client">顧問先</span></div>
+                    <div class="task-meta">19:00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 未連絡・アラート ===== -->
+        <div class="card">
+            <div class="card-header">
+                <h2>未連絡・アラート</h2>
+                <span class="count" style="background:#ef4444;">要対応</span>
+            </div>
+
+            <div class="alert-item alert-danger">
+                <div class="alert-days">35日</div>
+                <div>
+                    <strong>ジョイント工業会社</strong><br>
+                    <span style="font-size:12px;">DC案件 — 未連絡。今日中に連絡すること。</span>
+                </div>
+            </div>
+
+            <div class="alert-item alert-warn">
+                <div class="alert-days">—</div>
+                <div>
+                    <strong>プルデンタル渡さん</strong><br>
+                    <span style="font-size:12px;">連絡予定あり。本日中。</span>
+                </div>
+            </div>
+
+            <div class="alert-item alert-info">
+                <div class="alert-days">—</div>
+                <div>
+                    <strong>MY KOMON未連絡チェック</strong><br>
+                    <span style="font-size:12px;">未対応案件がないか確認する。</span>
+                </div>
+            </div>
+
+            <!-- 本日完了済み -->
+            <div style="margin-top:20px;">
+                <h3 style="font-size:13px; color:#64748b; margin-bottom:8px;">本日完了</h3>
+                <ul class="done-list">
+                    <li>高橋社長にメール（6月勉強会）</li>
+                    <li>AIセキュリティポリシー → 社内規程レベルに完成</li>
+                    <li>AIプライバシー設定マニュアル → 社内規程レベルに完成</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ===== 本日のアポ ===== -->
+        <div class="card">
+            <div class="card-header">
+                <h2>本日のアポ・会議</h2>
+            </div>
+
+            <div class="task">
+                <div class="task-priority priority-low"></div>
+                <div class="task-content">
+                    <div class="task-title">就業規則（米澤・トムトム・KLS）</div>
+                    <div class="task-meta">09:00〜09:30</div>
+                </div>
+            </div>
+            <div class="task">
+                <div class="task-priority priority-low"></div>
+                <div class="task-content">
+                    <div class="task-title">ソーシャルビジネスPT MTG</div>
+                    <div class="task-meta">12:00〜13:00</div>
+                </div>
+            </div>
+            <div class="task">
+                <div class="task-priority priority-low"></div>
+                <div class="task-content">
+                    <div class="task-title">週礼</div>
+                    <div class="task-meta">13:00〜13:30</div>
+                </div>
+            </div>
+            <div class="task">
+                <div class="task-priority priority-high"></div>
+                <div class="task-content">
+                    <div class="task-title">菊地様来所（介護立ち上げ）<span class="tag tag-client">顧問先</span></div>
+                    <div class="task-meta">14:00〜16:30 — 本日の最重要アポ</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== オンボーディング ===== -->
+        <div class="card">
+            <div class="card-header">
+                <h2>オンボーディング追跡</h2>
+                <span class="count" style="background:#22c55e;">最重要</span>
+            </div>
+
+            <div class="onboard-item">
+                <div class="onboard-header">
+                    <div class="onboard-name">岩倉さん</div>
+                    <span class="onboard-status status-active">進行中</span>
+                </div>
+                <div class="onboard-progress">
+                    <div class="onboard-bar" style="width:20%;"></div>
+                </div>
+                <div class="onboard-detail">
+                    定期打ち合わせ実施済み。オンボーディング計画を丁寧に進める。<br>
+                    「落とさないスケジュール管理を徹底」「すごく重要」
+                </div>
+            </div>
+
+            <div class="onboard-item">
+                <div class="onboard-header">
+                    <div class="onboard-name">菊地様（介護立ち上げ）</div>
+                    <span class="onboard-status status-pending">本日来所</span>
+                </div>
+                <div class="onboard-progress">
+                    <div class="onboard-bar" style="width:5%; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
+                </div>
+                <div class="onboard-detail">
+                    本日14:00来所。介護事業立ち上げの相談。
+                </div>
+            </div>
+
+            <div class="onboard-item">
+                <div class="onboard-header">
+                    <div class="onboard-name">新規顧問先（全般）</div>
+                    <span class="onboard-status status-planned">継続</span>
+                </div>
+                <div class="onboard-progress">
+                    <div class="onboard-bar" style="width:50%;"></div>
+                </div>
+                <div class="onboard-detail">
+                    データベースの整備・育成を進める。<br>
+                    いろんなところのオンボーディングがあるので丁寧にやっていく。
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 中期方向性 ===== -->
+        <div class="card grid-full">
+            <div class="card-header">
+                <h2>中期で見えている方向性</h2>
+                <span style="font-size:11px; color:#64748b;">2026年4月時点</span>
+            </div>
+
+            <table class="direction-table">
+                <thead>
+                    <tr>
+                        <th>テーマ</th>
+                        <th>及川さんの言葉</th>
+                        <th>やりたいこと</th>
+                        <th>ステータス</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>オンボーディング</td>
+                        <td><span class="direction-quote">「1番大事」「落とさない」「丁寧に」</span></td>
+                        <td>新規顧問先・岩倉さんのオンボーディングを丁寧にやる</td>
+                        <td><span class="tag tag-client" style="font-size:11px;">最優先</span></td>
+                    </tr>
+                    <tr>
+                        <td>AI+SaaS事業</td>
+                        <td><span class="direction-quote">「アプリに」「研修を組み込む」</span></td>
+                        <td>AI研修を含んだSaaS提供。バックエンドは企業DCに置く。</td>
+                        <td><span class="tag tag-keiei" style="font-size:11px;">方向性決定</span></td>
+                    </tr>
+                    <tr>
+                        <td>経営計画の再策定</td>
+                        <td><span class="direction-quote">「事業ドメインを見失わないで」</span></td>
+                        <td>経営計画を再度作成。「仕組みで社会を解決する」を旗にする。</td>
+                        <td><span class="tag tag-keiei" style="font-size:11px;">着手待ち</span></td>
+                    </tr>
+                    <tr>
+                        <td>AIの選び方</td>
+                        <td><span class="direction-quote">「絞って複数個使う」</span></td>
+                        <td>Perplexity / Claude Code / ChatGPT・Gemini / Cursor</td>
+                        <td><span style="color:#22c55e; font-size:11px; font-weight:700;">確定</span></td>
+                    </tr>
+                    <tr>
+                        <td>融資</td>
+                        <td><span class="direction-quote">「道銀1,000万ほぼ確定。すっきりした。」</span></td>
+                        <td>北洋→北海道銀行スイッチングも検討中。</td>
+                        <td><span style="color:#22c55e; font-size:11px; font-weight:700;">進行中</span></td>
+                    </tr>
+                    <tr>
+                        <td>東京支社</td>
+                        <td><span class="direction-quote">「なんとなく形になってきた感覚」</span></td>
+                        <td>レガシードさんとの連携。大きなシェアを取りに行く。</td>
+                        <td><span class="tag tag-keiei" style="font-size:11px;">進行中</span></td>
+                    </tr>
+                    <tr>
+                        <td>セミナー</td>
+                        <td><span class="direction-quote">「申込も順調」</span></td>
+                        <td>キャリアアップ助成金の勉強会（来年向け）。生成AIセミナー。</td>
+                        <td><span class="tag tag-keiei" style="font-size:11px;">進行中</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ===== メール・チャット・未対応 ===== -->
+        <div class="card">
+            <div class="card-header">
+                <h2>コミュニケーション状況</h2>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <h3 style="font-size:13px; color:#94a3b8; margin-bottom:8px;">メール（要対応）</h3>
+                <div class="task">
+                    <div class="task-priority priority-mid"></div>
+                    <div class="task-content">
+                        <div class="task-title">HRビズ進捗状況（評価制度の一次報告）</div>
+                        <div class="task-meta">月曜日に送る予定</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <h3 style="font-size:13px; color:#94a3b8; margin-bottom:8px;">チャット（要対応）</h3>
+                <div class="task">
+                    <div class="task-priority priority-low"></div>
+                    <div class="task-content">
+                        <div class="task-title">三友さん・曙さん・フジプラさん・イケスギさん・吉岡さん</div>
+                        <div class="task-meta">対応予定 19:00</div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 style="font-size:13px; color:#94a3b8; margin-bottom:8px;">MY KOMON</h3>
+                <div class="task">
+                    <div class="task-priority priority-mid"></div>
+                    <div class="task-content">
+                        <div class="task-title">未連絡案件チェック</div>
+                        <div class="task-meta">定期確認</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 今週の重要事項 ===== -->
+        <div class="card">
+            <div class="card-header">
+                <h2>今週のキーワード</h2>
+            </div>
+
+            <div style="font-size:24px; font-weight:800; color:#60a5fa; text-align:center; padding:16px 0 8px;">
+                オンボーディングが1番大事
+            </div>
+            <div style="font-size:13px; color:#94a3b8; text-align:center; padding-bottom:16px;">
+                オンボーディングにおけるデータベースの整備・育成<br>
+                AIエージェントの活用方法を取り入れる<br>
+                いろんなところのオンボーディングがあるので丁寧にやっていく
+            </div>
+
+            <div style="border-top:1px solid #334155; padding-top:16px; margin-top:8px;">
+                <div style="font-size:13px; color:#94a3b8; margin-bottom:6px;">人生の転換期メモ（4/2ジャーナリングより）</div>
+                <div style="font-size:14px; color:#fbbf24; font-weight:600;">
+                    「いい時代の流れになってる。めちゃくちゃいい流れ。」
+                </div>
+                <div style="font-size:12px; color:#64748b; margin-top:4px;">
+                    47〜48歳、人生の大改修。事業ドメインを見失わないでやっていく。
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="update-info">
+        COCKPIT v1.0｜最終更新：2026年4月6日 16:00｜更新者：Claude（レモン君）<br>
+        及川さんの指示に基づきClaudeが更新します
+    </div>
+
+</div>
+
+<script>
+// 月間カレンダーナビゲーション
+const months = document.querySelectorAll('.cal-month');
+const titleEl = document.getElementById('calTitle');
+const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+let currentIdx = 0;
+
+function getMonthList() {
+    return Array.from(months).map(m => m.dataset.month);
+}
+
+function changeMonth(dir) {
+    const list = getMonthList();
+    const newIdx = currentIdx + dir;
+    if (newIdx < 0 || newIdx >= list.length) {
+        alert(dir < 0 ? 'これより前の月のデータはありません。\nClaudeに「○月のカレンダーを追加して」と伝えてください。' : 'これより先の月のデータはありません。\nClaudeに「○月のカレンダーを追加して」と伝えてください。');
+        return;
+    }
+    months[currentIdx].classList.remove('active');
+    currentIdx = newIdx;
+    months[currentIdx].classList.add('active');
+    const [y, m] = list[currentIdx].split('-');
+    titleEl.textContent = y + '年' + monthNames[parseInt(m) - 1];
+}
+</script>
+</body>
+</html>
