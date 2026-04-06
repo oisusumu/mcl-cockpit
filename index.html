@@ -897,6 +897,10 @@ body {
                 <h2>受信メール（未読）</h2>
                 <span class="count" id="mail-count" style="background:#22c55e;">0件</span>
             </div>
+            <div style="display:flex; gap:8px; margin-bottom:8px; justify-content:flex-end;">
+                <button onclick="mailClearHidden()" style="background:#334155; color:#cbd5e1; border:1px solid #475569; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer;">非表示リセット</button>
+                <button onclick="mailDeleteChecked()" style="background:#ef4444; color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer;">チェック項目を非表示</button>
+            </div>
             <div id="mail-live" style="font-size:13px; color:#64748b; text-align:center; padding:16px 0;">
                 予定なし（Google同期ボタンで取得）
             </div>
@@ -1893,6 +1897,35 @@ function isMailExcluded(subject, from) {
     return false;
 }
 
+// --- Gmail非表示ID管理 ---
+var MAIL_HIDDEN_KEY = 'cockpit-mail-hidden';
+function getMailHidden() {
+    try { return JSON.parse(localStorage.getItem(MAIL_HIDDEN_KEY) || '[]'); }
+    catch(e) { return []; }
+}
+function saveMailHidden(arr) { localStorage.setItem(MAIL_HIDDEN_KEY, JSON.stringify(arr)); }
+function mailDeleteChecked() {
+    var checked = document.querySelectorAll('#mail-live .deletable input[type="checkbox"]:checked');
+    if (checked.length === 0) { alert('チェックされた項目がありません'); return; }
+    var hidden = getMailHidden();
+    checked.forEach(function(cb) {
+        var id = cb.closest('.deletable').getAttribute('data-mail-id');
+        if (id && hidden.indexOf(id) === -1) hidden.push(id);
+        cb.closest('.deletable').remove();
+    });
+    saveMailHidden(hidden);
+    // カウント更新
+    var remaining = document.querySelectorAll('#mail-live .deletable').length;
+    var countEl = document.getElementById('mail-count');
+    countEl.textContent = remaining + '件';
+    countEl.style.background = remaining > 0 ? '#ef4444' : '#22c55e';
+}
+function mailClearHidden() {
+    if (!confirm('非表示にしたメールを全部復活させますか？')) return;
+    localStorage.removeItem(MAIL_HIDDEN_KEY);
+    alert('リセットしました。Google同期で再取得してください。');
+}
+
 async function fetchGmail() {
     var response = await gapi.client.request({
         path: 'https://gmail.googleapis.com/gmail/v1/users/me/messages',
@@ -1936,17 +1969,20 @@ async function fetchGmail() {
 
         // フィルター：除外対象ならスキップ
         if (isMailExcluded(subject, from)) continue;
+        // 非表示リストに入っていればスキップ
+        var msgId = messages[i].id;
+        if (getMailHidden().indexOf(msgId) !== -1) continue;
 
         displayCount++;
-        var msgId = messages[i].id;
         var gmailUrl = 'https://mail.google.com/mail/u/0/#inbox/' + msgId;
-        html += '<a href="' + gmailUrl + '" target="_blank" class="task" style="margin-bottom:6px; text-decoration:none; color:inherit; display:flex; cursor:pointer;" onmouseover="this.style.background=\'#334155\'" onmouseout="this.style.background=\'transparent\'">';
+        html += '<div class="task deletable" data-mail-id="' + msgId + '" style="margin-bottom:6px; display:flex; align-items:center;">';
+        html += '  <input type="checkbox" style="margin-right:8px;">';
         html += '  <div class="task-priority priority-high"></div>';
-        html += '  <div class="task-content">';
+        html += '  <a href="' + gmailUrl + '" target="_blank" class="task-content" style="text-decoration:none; color:inherit; flex:1;" onmouseover="this.style.background=\'#334155\'" onmouseout="this.style.background=\'transparent\'">';
         html += '    <div class="task-title">' + escHtml(subject || '（件名なし）') + '</div>';
         html += '    <div class="task-meta">' + escHtml(from) + ' — ' + date + '</div>';
-        html += '  </div>';
-        html += '</a>';
+        html += '  </a>';
+        html += '</div>';
     }
 
     if (displayCount === 0) {
