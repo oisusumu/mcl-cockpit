@@ -251,6 +251,57 @@ body {
     padding: 20px 0;
 }
 
+/* 追加UI */
+.btn-add {
+    padding: 5px 12px;
+    background: #1e293b;
+    color: #60a5fa;
+    border: 1px dashed #3b82f6;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-add:hover { background: #334155; }
+.add-form {
+    display: none;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+.add-form.active { display: block; }
+.add-form input[type="text"], .add-form select {
+    width: 100%;
+    padding: 8px 10px;
+    background: #0f172a;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    color: #e2e8f0;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+.add-form input[type="text"]:focus { border-color: #3b82f6; outline: none; }
+.add-form-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+.add-form-actions button {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.btn-save { background: #3b82f6; color: #fff; }
+.btn-cancel { background: #334155; color: #94a3b8;
+}
+
 /* 方向性テーブル */
 .direction-table {
     width: 100%;
@@ -288,6 +339,7 @@ body {
     justify-content: flex-end;
     gap: 8px;
     margin-bottom: 10px;
+    flex-wrap: wrap;
 }
 .delete-bar button {
     padding: 6px 14px;
@@ -1121,6 +1173,134 @@ function restoreAll(btn) {
 }
 
 // 全復元（開発用：localStorage.removeItem('cockpit-deleted') でリセット可能）
+
+// ===== 追加機能 =====
+const ADD_STORAGE_KEY = 'cockpit-added';
+
+function getAdded() {
+    try { return JSON.parse(localStorage.getItem(ADD_STORAGE_KEY) || '{}'); }
+    catch { return {}; }
+}
+function saveAdded(obj) {
+    localStorage.setItem(ADD_STORAGE_KEY, JSON.stringify(obj));
+}
+
+// 追加ボタン・フォームを全delete-barに挿入
+(function initAddButtons() {
+    document.querySelectorAll('.delete-bar').forEach(function(bar, idx) {
+        var sectionId = 'section-' + idx;
+        bar.setAttribute('data-section', sectionId);
+
+        // ボタンとフォームのHTML
+        var addBtn = document.createElement('button');
+        addBtn.className = 'btn-add';
+        addBtn.textContent = '＋ 追加';
+        addBtn.onclick = function() {
+            var form = bar.nextElementSibling;
+            if (form && form.classList.contains('add-form')) {
+                form.classList.toggle('active');
+                if (form.classList.contains('active')) form.querySelector('input[type="text"]').focus();
+            }
+        };
+        bar.insertBefore(addBtn, bar.firstChild);
+
+        // フォーム
+        var form = document.createElement('div');
+        form.className = 'add-form';
+        form.innerHTML = '<input type="text" placeholder="タイトルを入力..." onkeydown="if(event.key===\'Enter\')this.parentNode.querySelector(\'.btn-save\').click();">'
+            + '<div class="add-form-actions">'
+            + '<button class="btn-cancel" onclick="this.closest(\'.add-form\').classList.remove(\'active\')">キャンセル</button>'
+            + '<button class="btn-save" onclick="addItem(this)">追加</button>'
+            + '</div>';
+        bar.parentNode.insertBefore(form, bar.nextSibling);
+
+        // 保存済みアイテムを復元
+        var added = getAdded();
+        var items = added[sectionId] || [];
+        items.forEach(function(item) { renderAddedItem(bar, sectionId, item); });
+    });
+})();
+
+function addItem(btn) {
+    var form = btn.closest('.add-form');
+    var input = form.querySelector('input[type="text"]');
+    var title = input.value.trim();
+    if (!title) return;
+
+    var bar = form.previousElementSibling;
+    var sectionId = bar.getAttribute('data-section');
+
+    var item = { id: 'added-' + Date.now(), title: title, created: new Date().toISOString() };
+
+    // localStorageに保存
+    var added = getAdded();
+    if (!added[sectionId]) added[sectionId] = [];
+    added[sectionId].push(item);
+    saveAdded(added);
+
+    // DOMに追加
+    renderAddedItem(bar, sectionId, item);
+
+    // フォームリセット
+    input.value = '';
+    form.classList.remove('active');
+}
+
+function renderAddedItem(bar, sectionId, item) {
+    var card = bar.closest('.card') || bar.closest('.card.grid-full');
+    // テーブル（中期方向性）か通常のタスクかを判定
+    var table = card.querySelector('.direction-table tbody');
+    if (table) {
+        var tr = document.createElement('tr');
+        tr.className = 'deletable';
+        tr.setAttribute('data-id', item.id);
+        tr.innerHTML = '<td><input type="checkbox" style="position:static; width:16px; height:16px; accent-color:#ef4444;"></td>'
+            + '<td>' + escHtml(item.title) + '</td>'
+            + '<td><span class="direction-quote">—</span></td>'
+            + '<td>—</td>'
+            + '<td><span style="color:#f59e0b; font-size:11px; font-weight:700;">新規</span></td>';
+        table.appendChild(tr);
+    } else {
+        // 通常のタスク形式
+        var div = document.createElement('div');
+        div.className = 'task deletable';
+        div.setAttribute('data-id', item.id);
+        div.style.marginBottom = '6px';
+        div.innerHTML = '<input type="checkbox">'
+            + '<div class="task-priority priority-mid"></div>'
+            + '<div class="task-content">'
+            + '<div class="task-title">' + escHtml(item.title) + ' <span class="tag tag-keiei" style="background:#f59e0b22; color:#f59e0b;">追加</span></div>'
+            + '<div class="task-meta">コックピットから追加</div>'
+            + '</div>';
+        // フォームの後に挿入
+        var addForm = card.querySelector('.add-form');
+        if (addForm && addForm.nextSibling) {
+            addForm.parentNode.insertBefore(div, addForm.nextSibling);
+        } else {
+            card.appendChild(div);
+        }
+    }
+}
+
+// 削除時にlocalStorageの追加データも消す
+var origDeleteChecked = deleteChecked;
+deleteChecked = function(btn) {
+    var card = btn.closest('.card') || btn.closest('.card.grid-full');
+    var bar = card.querySelector('.delete-bar');
+    var sectionId = bar ? bar.getAttribute('data-section') : null;
+    var checkedItems = card.querySelectorAll('.deletable input[type="checkbox"]:checked');
+    if (sectionId) {
+        var added = getAdded();
+        var sectionItems = added[sectionId] || [];
+        checkedItems.forEach(function(cb) {
+            var id = cb.closest('.deletable').getAttribute('data-id');
+            sectionItems = sectionItems.filter(function(it) { return it.id !== id; });
+        });
+        added[sectionId] = sectionItems;
+        saveAdded(added);
+    }
+    origDeleteChecked(btn);
+};
 
 // ===== Google API 連携 =====
 const CLIENT_ID = '281223233513-ot2g8g4fphkqg9768j41li61fopu2asu.apps.googleusercontent.com';
