@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>及川進のコックピット｜MCLグループ</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js" async defer></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -458,6 +460,9 @@ body {
 
     <!-- ツールバー -->
     <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+        <button id="btn-google-sync" onclick="handleGoogleSync()" style="display:inline-flex; align-items:center; gap:8px; padding:10px 20px; background:linear-gradient(135deg,#1a1a2e,#16213e); color:#e2e8f0; border-radius:10px; font-size:13px; font-weight:700; border:1px solid #475569; cursor:pointer; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+            &#128260; Google同期
+        </button>
         <a href="https://mcl-chatbot.onrender.com/" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:10px 20px; background:linear-gradient(135deg,#1e40af,#3b82f6); color:#fff; border-radius:10px; text-decoration:none; font-size:13px; font-weight:700; border:1px solid #60a5fa; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
             &#9878; 法令チャットボット
         </a>
@@ -747,6 +752,7 @@ body {
             <div style="margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #334155;">
                 <h3 style="font-size:13px; color:#94a3b8; margin-bottom:8px;">Google Tasks（未完了）</h3>
             </div>
+            <div id="tasks-live"></div>
             <div class="delete-bar">
                 <button class="btn-restore" onclick="restoreAll(this)">全解除</button>
                 <button class="btn-delete" onclick="deleteChecked(this)">チェック項目を削除</button>
@@ -792,10 +798,10 @@ body {
         <div class="card">
             <div class="card-header">
                 <h2>本日のアポ・会議</h2>
-                <span class="count">—</span>
+                <span class="count" id="appo-count">—</span>
             </div>
-            <div style="font-size:13px; color:#64748b; text-align:center; padding:16px 0;">
-                予定なし
+            <div id="appo-live" style="font-size:13px; color:#64748b; text-align:center; padding:16px 0;">
+                予定なし（Google同期ボタンで取得）
             </div>
         </div>
 
@@ -1084,6 +1090,206 @@ function restoreAll(btn) {
 }
 
 // 全復元（開発用：localStorage.removeItem('cockpit-deleted') でリセット可能）
+
+// ===== Google API 連携 =====
+const CLIENT_ID = '281223233513-ot2g8g4fphkqg9768j41li61fopu2asu.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly';
+let tokenClient;
+let gapiInited = false;
+let gisInited = false;
+
+function gapiLoaded() {
+    gapi.load('client', async function() {
+        await gapi.client.init({});
+        await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest');
+        await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest');
+        gapiInited = true;
+        maybeAutoSync();
+    });
+}
+
+function gisLoaded() {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: onTokenResponse,
+    });
+    gisInited = true;
+    maybeAutoSync();
+}
+
+function maybeAutoSync() {
+    if (!gapiInited || !gisInited) return;
+    // 保存済みトークンがあれば自動同期
+    var saved = sessionStorage.getItem('cockpit-gtoken');
+    if (saved) {
+        gapi.client.setToken(JSON.parse(saved));
+        fetchAllData();
+    }
+}
+
+function handleGoogleSync() {
+    if (!gapiInited || !gisInited) {
+        updateSyncBtn('読み込み中...', '#f59e0b');
+        return;
+    }
+    var token = gapi.client.getToken();
+    if (!token) {
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+    } else {
+        fetchAllData();
+    }
+}
+
+function onTokenResponse(resp) {
+    if (resp.error) {
+        updateSyncBtn('認証エラー', '#ef4444');
+        return;
+    }
+    sessionStorage.setItem('cockpit-gtoken', JSON.stringify(gapi.client.getToken()));
+    fetchAllData();
+}
+
+async function fetchAllData() {
+    updateSyncBtn('同期中...', '#f59e0b');
+    try {
+        await Promise.all([fetchCalendarEvents(), fetchTasks()]);
+        var now = new Date();
+        var timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+        updateSyncBtn('同期済 ' + timeStr, '#22c55e');
+    } catch(e) {
+        console.error(e);
+        updateSyncBtn('同期エラー', '#ef4444');
+    }
+}
+
+function updateSyncBtn(text, color) {
+    var btn = document.getElementById('btn-google-sync');
+    if (btn) {
+        btn.innerHTML = '&#128260; ' + text;
+        btn.style.borderColor = color;
+    }
+}
+
+// --- カレンダー取得 ---
+async function fetchCalendarEvents() {
+    var today = new Date();
+    var startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+    var endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
+
+    var response = await gapi.client.calendar.events.list({
+        calendarId: 'primary',
+        timeMin: startOfDay,
+        timeMax: endOfDay,
+        singleEvents: true,
+        orderBy: 'startTime',
+        maxResults: 20,
+    });
+
+    var events = response.result.items || [];
+    var container = document.getElementById('appo-live');
+    var countEl = document.getElementById('appo-count');
+
+    if (events.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:16px 0; color:#64748b;">本日の予定はありません</div>';
+        countEl.textContent = '0件';
+        countEl.style.background = '#22c55e';
+        return;
+    }
+
+    countEl.textContent = events.length + '件';
+    countEl.style.background = '#3b82f6';
+
+    var html = '';
+    events.forEach(function(ev) {
+        var timeStr = '';
+        if (ev.start.dateTime) {
+            var d = new Date(ev.start.dateTime);
+            timeStr = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+        } else {
+            timeStr = '終日';
+        }
+        var title = ev.summary || '（タイトルなし）';
+        html += '<div class="task" style="margin-bottom:6px;">';
+        html += '  <div class="task-priority priority-mid"></div>';
+        html += '  <div class="task-content">';
+        html += '    <div class="task-title">' + escHtml(title) + '</div>';
+        html += '    <div class="task-meta">' + timeStr + '</div>';
+        html += '  </div>';
+        html += '</div>';
+    });
+    container.innerHTML = html;
+}
+
+// --- タスク取得 ---
+async function fetchTasks() {
+    // タスクリスト一覧を取得
+    var listResp = await gapi.client.tasks.tasklists.list({ maxResults: 10 });
+    var taskLists = listResp.result.items || [];
+    if (taskLists.length === 0) return;
+
+    var allTasks = [];
+    for (var i = 0; i < taskLists.length; i++) {
+        var tl = taskLists[i];
+        var taskResp = await gapi.client.tasks.tasks.list({
+            tasklist: tl.id,
+            showCompleted: false,
+            maxResults: 20,
+        });
+        var items = taskResp.result.items || [];
+        items.forEach(function(t) { t._listName = tl.title; });
+        allTasks = allTasks.concat(items);
+    }
+
+    // Google Tasks セクションに表示
+    var section = document.querySelector('#tasks-live');
+    if (!section) return;
+
+    if (allTasks.length === 0) {
+        section.innerHTML = '<div style="text-align:center; padding:16px 0; color:#64748b;">未完了タスクはありません</div>';
+        return;
+    }
+
+    var html = '';
+    allTasks.forEach(function(t) {
+        var title = t.title || '（タイトルなし）';
+        var meta = t._listName;
+        if (t.due) {
+            var d = new Date(t.due);
+            meta += ' — 期限: ' + (d.getMonth()+1) + '/' + d.getDate();
+        } else {
+            meta += ' — 期限未設定';
+        }
+        html += '<div class="task deletable" data-id="gtask-' + (t.id||'').substring(0,8) + '" style="margin-bottom:6px;">';
+        html += '  <input type="checkbox">';
+        html += '  <div class="task-priority priority-mid"></div>';
+        html += '  <div class="task-content">';
+        html += '    <div class="task-title">' + escHtml(title) + '</div>';
+        html += '    <div class="task-meta">' + escHtml(meta) + '</div>';
+        html += '  </div>';
+        html += '</div>';
+    });
+    section.innerHTML = html;
+}
+
+function escHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+// ライブラリ読み込み完了時の初期化
+(function waitForLibs() {
+    if (typeof gapi !== 'undefined' && gapi.load) gapiLoaded();
+    else setTimeout(function() { if (typeof gapi !== 'undefined' && gapi.load) gapiLoaded(); }, 500);
+    if (typeof google !== 'undefined' && google.accounts) gisLoaded();
+    else setTimeout(function() { if (typeof google !== 'undefined' && google.accounts) gisLoaded(); }, 500);
+    // 再試行
+    setTimeout(function() {
+        if (!gapiInited && typeof gapi !== 'undefined' && gapi.load) gapiLoaded();
+        if (!gisInited && typeof google !== 'undefined' && google.accounts) gisLoaded();
+    }, 2000);
+})();
 </script>
 </body>
 </html>
