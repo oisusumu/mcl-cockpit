@@ -1697,7 +1697,7 @@ async function fetchTasks() {
 // 除外キーワード（件名に含まれていたら非表示）
 var MAIL_EXCLUDE_SUBJECTS = [
     'ウェルネス', 'クーポン', '予約が完了', '予約完了',
-    'テストテスト', '電子署名リクエスト',
+    'テストテスト',
     'ご案内', '勉強会のご案内',
     '年末年始', 'お知らせ', 'ニュースレター',
     'メルマガ', 'キャンペーン',
@@ -1762,13 +1762,15 @@ async function fetchGmail() {
         if (isMailExcluded(subject, from)) continue;
 
         displayCount++;
-        html += '<div class="task" style="margin-bottom:6px;">';
+        var msgId = messages[i].id;
+        var gmailUrl = 'https://mail.google.com/mail/u/0/#inbox/' + msgId;
+        html += '<a href="' + gmailUrl + '" target="_blank" class="task" style="margin-bottom:6px; text-decoration:none; color:inherit; display:flex; cursor:pointer;" onmouseover="this.style.background=\'#334155\'" onmouseout="this.style.background=\'transparent\'">';
         html += '  <div class="task-priority priority-high"></div>';
         html += '  <div class="task-content">';
         html += '    <div class="task-title">' + escHtml(subject || '（件名なし）') + '</div>';
         html += '    <div class="task-meta">' + escHtml(from) + ' — ' + date + '</div>';
         html += '  </div>';
-        html += '</div>';
+        html += '</a>';
     }
 
     if (displayCount === 0) {
