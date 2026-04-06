@@ -1700,8 +1700,11 @@ function handleGoogleSync() {
     }
     // ユーザージェスチャーを保つため、ここで同期的にポップアップを開く
     updateSyncBtn('認証ポップアップ確認', '#f59e0b');
+    // 古いトークンをクリアしてアカウント選択を強制
+    sessionStorage.removeItem('cockpit-gtoken');
+    try { gapi.client.setToken(null); } catch(e) {}
     try {
-        tokenClient.requestAccessToken({ prompt: 'consent' });
+        tokenClient.requestAccessToken({ prompt: 'select_account consent', hint: 'oikawa@mcl-gp.jp' });
     } catch(e) {
         console.error('requestAccessToken failed:', e);
         updateSyncBtn('ポップアップ失敗', '#ef4444');
