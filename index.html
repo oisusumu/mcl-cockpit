@@ -1187,6 +1187,9 @@ function saveAdded(obj) {
 // 追加ボタン・フォームを全delete-barに挿入
 (function initAddButtons() {
     document.querySelectorAll('.delete-bar').forEach(function(bar, idx) {
+        // 専用の追加ボタンがあるセクションはスキップ
+        if (bar.id === 'alert-bar') return;
+        if (bar.closest('#direction-card')) return;
         var sectionId = 'section-' + idx;
         bar.setAttribute('data-section', sectionId);
 
