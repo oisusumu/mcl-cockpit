@@ -299,7 +299,25 @@ body {
     cursor: pointer;
 }
 .btn-save { background: #3b82f6; color: #fff; }
-.btn-cancel { background: #334155; color: #94a3b8;
+.btn-cancel { background: #334155; color: #94a3b8; }
+
+/* パイプライン操作 */
+.pipeline-item-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+}
+.pipeline-item-actions button {
+    padding: 3px 8px;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: 600;
+}
+.pipe-btn-left { background: #1e40af; color: #93c5fd; }
+.pipe-btn-right { background: #065f46; color: #6ee7b7; }
+.pipe-btn-del { background: #7f1d1d; color: #fca5a5; margin-left: auto !important;
 }
 
 /* 方向性テーブル */
@@ -917,27 +935,30 @@ body {
                 <h2>企業型DC パイプライン</h2>
                 <span style="font-size:11px; color:#64748b;">導入実績 約50社｜目標 年間100社</span>
             </div>
-            <div class="pipeline-grid">
-                <div class="pipeline-col pipeline-col-prospect">
+            <div class="pipeline-grid" id="dc-pipeline">
+                <div class="pipeline-col pipeline-col-prospect" data-stage="prospect">
                     <div class="pipeline-col-header">
                         <div class="pipeline-col-title">見込み顧客</div>
-                        <div class="pipeline-col-count">0</div>
+                        <div class="pipeline-col-count" id="dc-count-prospect">0</div>
                     </div>
-                    <div class="pipeline-empty">案件を追加してください</div>
+                    <div class="pipeline-items" id="dc-items-prospect"></div>
+                    <button class="btn-add" style="width:100%; margin-top:8px;" onclick="dcAddPrompt('prospect')">＋ 追加</button>
                 </div>
-                <div class="pipeline-col pipeline-col-active">
+                <div class="pipeline-col pipeline-col-active" data-stage="active">
                     <div class="pipeline-col-header">
                         <div class="pipeline-col-title">進行中</div>
-                        <div class="pipeline-col-count">0</div>
+                        <div class="pipeline-col-count" id="dc-count-active">0</div>
                     </div>
-                    <div class="pipeline-empty">案件を追加してください</div>
+                    <div class="pipeline-items" id="dc-items-active"></div>
+                    <button class="btn-add" style="width:100%; margin-top:8px;" onclick="dcAddPrompt('active')">＋ 追加</button>
                 </div>
-                <div class="pipeline-col pipeline-col-done">
+                <div class="pipeline-col pipeline-col-done" data-stage="done">
                     <div class="pipeline-col-header">
                         <div class="pipeline-col-title">導入済み</div>
-                        <div class="pipeline-col-count">0</div>
+                        <div class="pipeline-col-count" id="dc-count-done">0</div>
                     </div>
-                    <div class="pipeline-empty">案件を追加してください</div>
+                    <div class="pipeline-items" id="dc-items-done"></div>
+                    <button class="btn-add" style="width:100%; margin-top:8px;" onclick="dcAddPrompt('done')">＋ 追加</button>
                 </div>
             </div>
         </div>
@@ -1301,6 +1322,115 @@ deleteChecked = function(btn) {
     }
     origDeleteChecked(btn);
 };
+
+// ===== DCパイプライン =====
+const DC_STORAGE_KEY = 'cockpit-dc-pipeline';
+const DC_STAGES = ['prospect', 'active', 'done'];
+const DC_STAGE_NAMES = { prospect: '見込み顧客', active: '進行中', done: '導入済み' };
+
+function getDcData() {
+    try { return JSON.parse(localStorage.getItem(DC_STORAGE_KEY) || '{"prospect":[],"active":[],"done":[]}'); }
+    catch { return { prospect: [], active: [], done: [] }; }
+}
+function saveDcData(data) {
+    localStorage.setItem(DC_STORAGE_KEY, JSON.stringify(data));
+}
+
+function dcRenderAll() {
+    var data = getDcData();
+    DC_STAGES.forEach(function(stage) {
+        var container = document.getElementById('dc-items-' + stage);
+        var countEl = document.getElementById('dc-count-' + stage);
+        if (!container) return;
+        container.innerHTML = '';
+        var items = data[stage] || [];
+        countEl.textContent = items.length;
+        items.forEach(function(item) {
+            container.appendChild(dcCreateCard(item, stage));
+        });
+    });
+}
+
+function dcCreateCard(item, stage) {
+    var div = document.createElement('div');
+    div.className = 'pipeline-item';
+    div.setAttribute('data-dc-id', item.id);
+
+    var nameDiv = document.createElement('div');
+    nameDiv.className = 'pipeline-item-name';
+    nameDiv.textContent = item.name;
+    div.appendChild(nameDiv);
+
+    if (item.memo) {
+        var metaDiv = document.createElement('div');
+        metaDiv.className = 'pipeline-item-meta';
+        metaDiv.textContent = item.memo;
+        div.appendChild(metaDiv);
+    }
+
+    var actions = document.createElement('div');
+    actions.className = 'pipeline-item-actions';
+
+    var stageIdx = DC_STAGES.indexOf(stage);
+
+    if (stageIdx > 0) {
+        var leftBtn = document.createElement('button');
+        leftBtn.className = 'pipe-btn-left';
+        leftBtn.textContent = '← ' + DC_STAGE_NAMES[DC_STAGES[stageIdx - 1]];
+        leftBtn.onclick = function() { dcMove(item.id, stage, DC_STAGES[stageIdx - 1]); };
+        actions.appendChild(leftBtn);
+    }
+
+    if (stageIdx < DC_STAGES.length - 1) {
+        var rightBtn = document.createElement('button');
+        rightBtn.className = 'pipe-btn-right';
+        rightBtn.textContent = DC_STAGE_NAMES[DC_STAGES[stageIdx + 1]] + ' →';
+        rightBtn.onclick = function() { dcMove(item.id, stage, DC_STAGES[stageIdx + 1]); };
+        actions.appendChild(rightBtn);
+    }
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'pipe-btn-del';
+    delBtn.textContent = '削除';
+    delBtn.onclick = function() { dcDelete(item.id, stage); };
+    actions.appendChild(delBtn);
+
+    div.appendChild(actions);
+    return div;
+}
+
+function dcAddPrompt(stage) {
+    var name = prompt('企業名を入力：');
+    if (!name || !name.trim()) return;
+    var memo = prompt('メモ（任意）：') || '';
+    var data = getDcData();
+    data[stage].push({ id: 'dc-' + Date.now(), name: name.trim(), memo: memo.trim() });
+    saveDcData(data);
+    dcRenderAll();
+}
+
+function dcMove(itemId, fromStage, toStage) {
+    var data = getDcData();
+    var idx = -1;
+    for (var i = 0; i < data[fromStage].length; i++) {
+        if (data[fromStage][i].id === itemId) { idx = i; break; }
+    }
+    if (idx === -1) return;
+    var item = data[fromStage].splice(idx, 1)[0];
+    data[toStage].push(item);
+    saveDcData(data);
+    dcRenderAll();
+}
+
+function dcDelete(itemId, stage) {
+    var data = getDcData();
+    data[stage] = data[stage].filter(function(it) { return it.id !== itemId; });
+    saveDcData(data);
+    dcRenderAll();
+}
+
+// 初期表示
+dcRenderAll();
 
 // ===== Google API 連携 =====
 const CLIENT_ID = '281223233513-ot2g8g4fphkqg9768j41li61fopu2asu.apps.googleusercontent.com';
