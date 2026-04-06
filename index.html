@@ -1750,17 +1750,27 @@ function escHtml(s) {
     return d.innerHTML;
 }
 
-// ライブラリ読み込み完了時の初期化
+// ライブラリ読み込み完了時の初期化（ポーリング方式）
 (function waitForLibs() {
-    if (typeof gapi !== 'undefined' && gapi.load) gapiLoaded();
-    else setTimeout(function() { if (typeof gapi !== 'undefined' && gapi.load) gapiLoaded(); }, 500);
-    if (typeof google !== 'undefined' && google.accounts) gisLoaded();
-    else setTimeout(function() { if (typeof google !== 'undefined' && google.accounts) gisLoaded(); }, 500);
-    // 再試行
-    setTimeout(function() {
-        if (!gapiInited && typeof gapi !== 'undefined' && gapi.load) gapiLoaded();
-        if (!gisInited && typeof google !== 'undefined' && google.accounts) gisLoaded();
-    }, 2000);
+    var attempts = 0;
+    var maxAttempts = 30;
+    var timer = setInterval(function() {
+        attempts++;
+        if (!gapiInited && typeof gapi !== 'undefined' && gapi.load) {
+            gapiLoaded();
+        }
+        if (!gisInited && typeof google !== 'undefined' && google.accounts) {
+            gisLoaded();
+        }
+        if ((gapiInited && gisInited) || attempts >= maxAttempts) {
+            clearInterval(timer);
+            if (gapiInited && gisInited) {
+                updateSyncBtn('Google同期', '#475569');
+            } else {
+                updateSyncBtn('API読込失敗', '#ef4444');
+            }
+        }
+    }, 500);
 })();
 </script>
 </body>
