@@ -1669,9 +1669,6 @@ async function initGapi() {
             gapi.load('client', { callback: resolve, onerror: reject, timeout: 10000, ontimeout: reject });
         });
         await gapi.client.init({});
-        await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest');
-        await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest');
-        await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest');
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
             scope: SCOPES,
@@ -1691,24 +1688,34 @@ async function initGapi() {
     }
 }
 
-async function handleGoogleSync() {
-    updateSyncBtn('接続中...', '#f59e0b');
+function handleGoogleSync() {
     if (typeof gapi === 'undefined' || typeof google === 'undefined' || !google.accounts) {
         updateSyncBtn('API未読込（リロード）', '#ef4444');
         return;
     }
-    var ok = await initGapi();
-    if (!ok) {
-        updateSyncBtn('接続失敗', '#ef4444');
+    if (!gapiReady || !tokenClient) {
+        updateSyncBtn('初期化中…再クリック', '#f59e0b');
+        initGapi();
         return;
     }
-    var token = gapi.client.getToken();
-    if (!token) {
+    // ユーザージェスチャーを保つため、ここで同期的にポップアップを開く
+    updateSyncBtn('認証ポップアップ確認', '#f59e0b');
+    try {
         tokenClient.requestAccessToken({ prompt: 'consent' });
-    } else {
-        fetchAllData();
+    } catch(e) {
+        console.error('requestAccessToken failed:', e);
+        updateSyncBtn('ポップアップ失敗', '#ef4444');
     }
 }
+
+// ページ読込後にGoogle APIを事前初期化（クリック時のジェスチャー喪失を回避）
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        if (typeof gapi !== 'undefined' && typeof google !== 'undefined' && google.accounts) {
+            initGapi();
+        }
+    }, 1500);
+});
 
 function onTokenResponse(resp) {
     if (resp.error) {
@@ -1755,13 +1762,15 @@ async function fetchCalendarEvents() {
     var startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
     var endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
 
-    var response = await gapi.client.calendar.events.list({
-        calendarId: 'primary',
-        timeMin: startOfDay,
-        timeMax: endOfDay,
-        singleEvents: true,
-        orderBy: 'startTime',
-        maxResults: 20,
+    var response = await gapi.client.request({
+        path: 'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+        params: {
+            timeMin: startOfDay,
+            timeMax: endOfDay,
+            singleEvents: true,
+            orderBy: 'startTime',
+            maxResults: 20,
+        },
     });
 
     var events = response.result.items || [];
@@ -1802,17 +1811,19 @@ async function fetchCalendarEvents() {
 // --- タスク取得 ---
 async function fetchTasks() {
     // タスクリスト一覧を取得
-    var listResp = await gapi.client.tasks.tasklists.list({ maxResults: 10 });
+    var listResp = await gapi.client.request({
+        path: 'https://tasks.googleapis.com/tasks/v1/users/@me/lists',
+        params: { maxResults: 10 },
+    });
     var taskLists = listResp.result.items || [];
     if (taskLists.length === 0) return;
 
     var allTasks = [];
     for (var i = 0; i < taskLists.length; i++) {
         var tl = taskLists[i];
-        var taskResp = await gapi.client.tasks.tasks.list({
-            tasklist: tl.id,
-            showCompleted: false,
-            maxResults: 20,
+        var taskResp = await gapi.client.request({
+            path: 'https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(tl.id) + '/tasks',
+            params: { showCompleted: false, maxResults: 20 },
         });
         var items = taskResp.result.items || [];
         items.forEach(function(t) { t._listName = tl.title; });
@@ -1878,10 +1889,12 @@ function isMailExcluded(subject, from) {
 }
 
 async function fetchGmail() {
-    var response = await gapi.client.gmail.users.messages.list({
-        userId: 'me',
-        q: 'is:unread -category:promotions -category:social -category:updates',
-        maxResults: 20,
+    var response = await gapi.client.request({
+        path: 'https://gmail.googleapis.com/gmail/v1/users/me/messages',
+        params: {
+            q: 'is:unread -category:promotions -category:social -category:updates',
+            maxResults: 20,
+        },
     });
 
     var messages = response.result.messages || [];
@@ -1898,11 +1911,12 @@ async function fetchGmail() {
     var html = '';
     var displayCount = 0;
     for (var i = 0; i < messages.length; i++) {
-        var detail = await gapi.client.gmail.users.messages.get({
-            userId: 'me',
-            id: messages[i].id,
-            format: 'metadata',
-            metadataHeaders: ['From', 'Subject', 'Date'],
+        var detail = await gapi.client.request({
+            path: 'https://gmail.googleapis.com/gmail/v1/users/me/messages/' + encodeURIComponent(messages[i].id),
+            params: {
+                format: 'metadata',
+                metadataHeaders: ['From', 'Subject', 'Date'],
+            },
         });
         var headers = detail.result.payload.headers;
         var from = '', subject = '', date = '';
