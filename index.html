@@ -1938,19 +1938,8 @@ function escHtml(s) {
     return d.innerHTML;
 }
 
-// ボタンを「Google同期」で即表示（クリック時に初期化）
-(function() {
-    var check = setInterval(function() {
-        if (typeof gapi !== 'undefined' && typeof google !== 'undefined' && google.accounts) {
-            clearInterval(check);
-            updateSyncBtn('Google同期', '#475569');
-            // 保存済みトークンがあれば自動同期を試みる
-            initGapi();
-        }
-    }, 300);
-    // 10秒で諦め
-    setTimeout(function() { clearInterval(check); updateSyncBtn('Google同期', '#475569'); }, 10000);
-})();
+// ボタンは常に「Google同期」表示（クリック時のみ接続）
+updateSyncBtn('Google同期', '#475569');
 </script>
 </body>
 </html>
