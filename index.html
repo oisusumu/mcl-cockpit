@@ -1660,43 +1660,46 @@ dcRenderAll();
 const CLIENT_ID = '281223233513-ot2g8g4fphkqg9768j41li61fopu2asu.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly https://www.googleapis.com/auth/gmail.readonly';
 let tokenClient;
-let gapiInited = false;
-let gisInited = false;
+let gapiReady = false;
 
-function gapiLoaded() {
-    gapi.load('client', async function() {
+async function initGapi() {
+    if (gapiReady) return true;
+    try {
+        await new Promise(function(resolve, reject) {
+            gapi.load('client', { callback: resolve, onerror: reject, timeout: 10000, ontimeout: reject });
+        });
         await gapi.client.init({});
         await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest');
         await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest');
         await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest');
-        gapiInited = true;
-        maybeAutoSync();
-    });
-}
-
-function gisLoaded() {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: onTokenResponse,
-    });
-    gisInited = true;
-    maybeAutoSync();
-}
-
-function maybeAutoSync() {
-    if (!gapiInited || !gisInited) return;
-    // 保存済みトークンがあれば自動同期
-    var saved = sessionStorage.getItem('cockpit-gtoken');
-    if (saved) {
-        gapi.client.setToken(JSON.parse(saved));
-        fetchAllData();
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: onTokenResponse,
+        });
+        gapiReady = true;
+        // 保存済みトークンがあれば自動同期
+        var saved = sessionStorage.getItem('cockpit-gtoken');
+        if (saved) {
+            gapi.client.setToken(JSON.parse(saved));
+            fetchAllData();
+        }
+        return true;
+    } catch(e) {
+        console.error('Google API init failed:', e);
+        return false;
     }
 }
 
-function handleGoogleSync() {
-    if (!gapiInited || !gisInited) {
-        updateSyncBtn('読み込み中...', '#f59e0b');
+async function handleGoogleSync() {
+    updateSyncBtn('接続中...', '#f59e0b');
+    if (typeof gapi === 'undefined' || typeof google === 'undefined' || !google.accounts) {
+        updateSyncBtn('API未読込（リロード）', '#ef4444');
+        return;
+    }
+    var ok = await initGapi();
+    if (!ok) {
+        updateSyncBtn('接続失敗', '#ef4444');
         return;
     }
     var token = gapi.client.getToken();
@@ -1935,27 +1938,18 @@ function escHtml(s) {
     return d.innerHTML;
 }
 
-// ライブラリ読み込み完了時の初期化（ポーリング方式）
-(function waitForLibs() {
-    var attempts = 0;
-    var maxAttempts = 30;
-    var timer = setInterval(function() {
-        attempts++;
-        if (!gapiInited && typeof gapi !== 'undefined' && gapi.load) {
-            gapiLoaded();
+// ボタンを「Google同期」で即表示（クリック時に初期化）
+(function() {
+    var check = setInterval(function() {
+        if (typeof gapi !== 'undefined' && typeof google !== 'undefined' && google.accounts) {
+            clearInterval(check);
+            updateSyncBtn('Google同期', '#475569');
+            // 保存済みトークンがあれば自動同期を試みる
+            initGapi();
         }
-        if (!gisInited && typeof google !== 'undefined' && google.accounts) {
-            gisLoaded();
-        }
-        if ((gapiInited && gisInited) || attempts >= maxAttempts) {
-            clearInterval(timer);
-            if (gapiInited && gisInited) {
-                updateSyncBtn('Google同期', '#475569');
-            } else {
-                updateSyncBtn('API読込失敗', '#ef4444');
-            }
-        }
-    }, 500);
+    }, 300);
+    // 10秒で諦め
+    setTimeout(function() { clearInterval(check); updateSyncBtn('Google同期', '#475569'); }, 10000);
 })();
 </script>
 </body>
