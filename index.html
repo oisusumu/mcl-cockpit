@@ -892,11 +892,10 @@ body {
         <div class="card">
             <div class="card-header">
                 <h2>受信メール（未読）</h2>
-                <span class="count" style="background:#22c55e;">0件</span>
+                <span class="count" id="mail-count" style="background:#22c55e;">0件</span>
             </div>
-            <div style="font-size:13px; color:#64748b; text-align:center; padding:16px 0;">
-                ビジネスメールの未読はありません<br>
-                <span style="font-size:11px;">（システム通知3件を除外済み）</span>
+            <div id="mail-live" style="font-size:13px; color:#64748b; text-align:center; padding:16px 0;">
+                予定なし（Google同期ボタンで取得）
             </div>
         </div>
 
@@ -1514,7 +1513,7 @@ dcRenderAll();
 
 // ===== Google API 連携 =====
 const CLIENT_ID = '281223233513-ot2g8g4fphkqg9768j41li61fopu2asu.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly';
+const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly https://www.googleapis.com/auth/gmail.readonly';
 let tokenClient;
 let gapiInited = false;
 let gisInited = false;
@@ -1524,6 +1523,7 @@ function gapiLoaded() {
         await gapi.client.init({});
         await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest');
         await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest');
+        await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest');
         gapiInited = true;
         maybeAutoSync();
     });
@@ -1574,7 +1574,7 @@ function onTokenResponse(resp) {
 async function fetchAllData() {
     updateSyncBtn('同期中...', '#f59e0b');
     try {
-        await Promise.all([fetchCalendarEvents(), fetchTasks()]);
+        await Promise.all([fetchCalendarEvents(), fetchTasks(), fetchGmail()]);
         var now = new Date();
         var timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
         updateSyncBtn('同期済 ' + timeStr, '#22c55e');
@@ -1691,6 +1691,57 @@ async function fetchTasks() {
         html += '</div>';
     });
     section.innerHTML = html;
+}
+
+// --- Gmail取得 ---
+async function fetchGmail() {
+    var response = await gapi.client.gmail.users.messages.list({
+        userId: 'me',
+        q: 'is:unread -category:promotions -category:social -category:updates',
+        maxResults: 10,
+    });
+
+    var messages = response.result.messages || [];
+    var container = document.getElementById('mail-live');
+    var countEl = document.getElementById('mail-count');
+
+    if (messages.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:16px 0; color:#64748b;">未読メールはありません</div>';
+        countEl.textContent = '0件';
+        countEl.style.background = '#22c55e';
+        return;
+    }
+
+    countEl.textContent = messages.length + '件';
+    countEl.style.background = messages.length > 0 ? '#ef4444' : '#22c55e';
+
+    var html = '';
+    for (var i = 0; i < messages.length; i++) {
+        var detail = await gapi.client.gmail.users.messages.get({
+            userId: 'me',
+            id: messages[i].id,
+            format: 'metadata',
+            metadataHeaders: ['From', 'Subject', 'Date'],
+        });
+        var headers = detail.result.payload.headers;
+        var from = '', subject = '', date = '';
+        headers.forEach(function(h) {
+            if (h.name === 'From') from = h.value.replace(/<.*>/, '').trim();
+            if (h.name === 'Subject') subject = h.value;
+            if (h.name === 'Date') {
+                var d = new Date(h.value);
+                date = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+            }
+        });
+        html += '<div class="task" style="margin-bottom:6px;">';
+        html += '  <div class="task-priority priority-high"></div>';
+        html += '  <div class="task-content">';
+        html += '    <div class="task-title">' + escHtml(subject || '（件名なし）') + '</div>';
+        html += '    <div class="task-meta">' + escHtml(from) + ' — ' + date + '</div>';
+        html += '  </div>';
+        html += '</div>';
+    }
+    container.innerHTML = html;
 }
 
 function escHtml(s) {
