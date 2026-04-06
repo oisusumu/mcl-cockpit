@@ -823,8 +823,13 @@ body {
                 <h2>オンボーディング追跡</h2>
                 <span class="count" style="background:#22c55e;">最重要</span>
             </div>
+            <div class="delete-bar">
+                <button class="btn-restore" onclick="restoreAll(this)">全解除</button>
+                <button class="btn-delete" onclick="deleteChecked(this)">チェック項目を削除</button>
+            </div>
 
-            <div class="onboard-item">
+            <div class="onboard-item deletable" data-id="onboard-iwakura">
+                <input type="checkbox">
                 <div class="onboard-header">
                     <div class="onboard-name">岩倉さん</div>
                     <span class="onboard-status status-active">進行中</span>
@@ -838,7 +843,8 @@ body {
                 </div>
             </div>
 
-            <div class="onboard-item">
+            <div class="onboard-item deletable" data-id="onboard-general">
+                <input type="checkbox">
                 <div class="onboard-header">
                     <div class="onboard-name">新規顧問先（全般）</div>
                     <span class="onboard-status status-planned">継続</span>
@@ -891,9 +897,14 @@ body {
                 <span style="font-size:11px; color:#64748b;">2026年4月時点</span>
             </div>
 
+            <div class="delete-bar">
+                <button class="btn-restore" onclick="restoreAll(this)">全解除</button>
+                <button class="btn-delete" onclick="deleteChecked(this)">チェック項目を削除</button>
+            </div>
             <table class="direction-table">
                 <thead>
                     <tr>
+                        <th style="width:30px;"></th>
                         <th>テーマ</th>
                         <th>及川さんの言葉</th>
                         <th>やりたいこと</th>
@@ -901,31 +912,36 @@ body {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
+                    <tr class="deletable" data-id="dir-onboard">
+                        <td><input type="checkbox" style="position:static; width:16px; height:16px; accent-color:#ef4444;"></td>
                         <td>オンボーディング</td>
                         <td><span class="direction-quote">「1番大事」「落とさない」「丁寧に」</span></td>
                         <td>新規顧問先・岩倉さんのオンボーディングを丁寧にやる</td>
                         <td><span class="tag tag-client" style="font-size:11px;">最優先</span></td>
                     </tr>
-                    <tr>
+                    <tr class="deletable" data-id="dir-ai-saas">
+                        <td><input type="checkbox" style="position:static; width:16px; height:16px; accent-color:#ef4444;"></td>
                         <td>AI+SaaS事業</td>
                         <td><span class="direction-quote">「アプリに」「研修を組み込む」</span></td>
                         <td>AI研修を含んだSaaS提供。バックエンドは企業DCに置く。</td>
                         <td><span class="tag tag-keiei" style="font-size:11px;">方向性決定</span></td>
                     </tr>
-                    <tr>
+                    <tr class="deletable" data-id="dir-keiei-plan">
+                        <td><input type="checkbox" style="position:static; width:16px; height:16px; accent-color:#ef4444;"></td>
                         <td>経営計画の再策定</td>
                         <td><span class="direction-quote">「事業ドメインを見失わないで」</span></td>
                         <td>経営計画を再度作成。「仕組みで社会を解決する」を旗にする。</td>
                         <td><span class="tag tag-keiei" style="font-size:11px;">着手待ち</span></td>
                     </tr>
-                    <tr>
+                    <tr class="deletable" data-id="dir-ai-choice">
+                        <td><input type="checkbox" style="position:static; width:16px; height:16px; accent-color:#ef4444;"></td>
                         <td>AIの選び方</td>
                         <td><span class="direction-quote">「絞って複数個使う」</span></td>
                         <td>Perplexity / Claude Code / ChatGPT・Gemini / Cursor</td>
                         <td><span style="color:#22c55e; font-size:11px; font-weight:700;">確定</span></td>
                     </tr>
-                    <tr>
+                    <tr class="deletable" data-id="dir-legaseed">
+                        <td><input type="checkbox" style="position:static; width:16px; height:16px; accent-color:#ef4444;"></td>
                         <td>Legaseed清水さん連携</td>
                         <td><span class="direction-quote">「大きなシェアを取りに行く」</span></td>
                         <td>東京拠点・DC×採用支援の連携。中長期パートナーシップ構築。</td>
@@ -940,10 +956,15 @@ body {
             <div class="card-header">
                 <h2>コミュニケーション状況</h2>
             </div>
+            <div class="delete-bar">
+                <button class="btn-restore" onclick="restoreAll(this)">全解除</button>
+                <button class="btn-delete" onclick="deleteChecked(this)">チェック項目を削除</button>
+            </div>
 
             <div style="margin-bottom:12px;">
                 <h3 style="font-size:13px; color:#94a3b8; margin-bottom:8px;">メール（要対応）</h3>
-                <div class="task task-done">
+                <div class="task task-done deletable" data-id="comm-hrbiz">
+                    <input type="checkbox">
                     <div class="task-priority priority-low"></div>
                     <div class="task-content">
                         <div class="task-title">HRビズ進捗状況（評価制度の一次報告）</div>
@@ -954,7 +975,8 @@ body {
 
             <div style="margin-bottom:12px;">
                 <h3 style="font-size:13px; color:#94a3b8; margin-bottom:8px;">チャット（要対応）</h3>
-                <div class="task">
+                <div class="task deletable" data-id="comm-chat-clients">
+                    <input type="checkbox">
                     <div class="task-priority priority-low"></div>
                     <div class="task-content">
                         <div class="task-title">三友さん・曙さん・フジプラさん・イケスギさん・吉岡さん</div>
@@ -965,7 +987,8 @@ body {
 
             <div>
                 <h3 style="font-size:13px; color:#94a3b8; margin-bottom:8px;">MY KOMON</h3>
-                <div class="task">
+                <div class="task deletable" data-id="comm-mykomon">
+                    <input type="checkbox">
                     <div class="task-priority priority-mid"></div>
                     <div class="task-content">
                         <div class="task-title">未連絡案件チェック</div>
@@ -980,17 +1003,25 @@ body {
             <div class="card-header">
                 <h2>今週のキーワード</h2>
             </div>
-
-            <div style="font-size:24px; font-weight:800; color:#60a5fa; text-align:center; padding:16px 0 8px;">
-                オンボーディングが1番大事
-            </div>
-            <div style="font-size:13px; color:#94a3b8; text-align:center; padding-bottom:16px;">
-                オンボーディングにおけるデータベースの整備・育成<br>
-                AIエージェントの活用方法を取り入れる<br>
-                いろんなところのオンボーディングがあるので丁寧にやっていく
+            <div class="delete-bar">
+                <button class="btn-restore" onclick="restoreAll(this)">全解除</button>
+                <button class="btn-delete" onclick="deleteChecked(this)">チェック項目を削除</button>
             </div>
 
-            <div style="border-top:1px solid #334155; padding-top:16px; margin-top:8px;">
+            <div class="deletable" data-id="kw-onboard" style="position:relative; padding-right:30px;">
+                <input type="checkbox">
+                <div style="font-size:24px; font-weight:800; color:#60a5fa; text-align:center; padding:16px 0 8px;">
+                    オンボーディングが1番大事
+                </div>
+                <div style="font-size:13px; color:#94a3b8; text-align:center; padding-bottom:16px;">
+                    オンボーディングにおけるデータベースの整備・育成<br>
+                    AIエージェントの活用方法を取り入れる<br>
+                    いろんなところのオンボーディングがあるので丁寧にやっていく
+                </div>
+            </div>
+
+            <div class="deletable" data-id="kw-journal" style="position:relative; padding-right:30px; border-top:1px solid #334155; padding-top:16px; margin-top:8px;">
+                <input type="checkbox">
                 <div style="font-size:13px; color:#94a3b8; margin-bottom:6px;">人生の転換期メモ（4/2ジャーナリングより）</div>
                 <div style="font-size:14px; color:#fbbf24; font-weight:600;">
                     「いい時代の流れになってる。めちゃくちゃいい流れ。」
