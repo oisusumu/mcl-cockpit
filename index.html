@@ -870,11 +870,14 @@ body {
         <div class="card">
             <div class="card-header">
                 <h2>未連絡・アラート</h2>
-                <span class="count" style="background:#22c55e;">0件</span>
+                <span class="count" id="alert-count" style="background:#22c55e;">0件</span>
             </div>
-            <div style="font-size:13px; color:#64748b; text-align:center; padding:16px 0;">
-                未連絡アラートはありません
+            <div class="delete-bar" id="alert-bar">
+                <button class="btn-add" onclick="alertAdd()">＋ 追加</button>
+                <button class="btn-restore" onclick="restoreAll(this)">全解除</button>
+                <button class="btn-delete" onclick="alertDeleteChecked()">チェック項目を削除</button>
             </div>
+            <div id="alert-items"></div>
         </div>
 
         <!-- ===== 本日のアポ ===== -->
@@ -1334,6 +1337,91 @@ deleteChecked = function(btn) {
     }
     origDeleteChecked(btn);
 };
+
+// ===== 未連絡・アラート =====
+const ALERT_STORAGE_KEY = 'cockpit-alerts';
+
+function getAlerts() {
+    try { return JSON.parse(localStorage.getItem(ALERT_STORAGE_KEY) || '[]'); }
+    catch { return []; }
+}
+function saveAlerts(arr) { localStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(arr)); }
+
+function alertRenderAll() {
+    var alerts = getAlerts();
+    var container = document.getElementById('alert-items');
+    var countEl = document.getElementById('alert-count');
+    if (!container) return;
+
+    // 削除済みを除外
+    var deleted = getDeleted();
+    var visible = alerts.filter(function(a) { return deleted.indexOf(a.id) === -1; });
+
+    countEl.textContent = visible.length + '件';
+    countEl.style.background = visible.length > 0 ? '#ef4444' : '#22c55e';
+
+    if (visible.length === 0) {
+        container.innerHTML = '<div style="font-size:13px; color:#64748b; text-align:center; padding:16px 0;">未連絡アラートはありません</div>';
+        return;
+    }
+
+    var html = '';
+    visible.forEach(function(a) {
+        var days = '';
+        if (a.lastContact) {
+            var diff = Math.floor((Date.now() - new Date(a.lastContact).getTime()) / 86400000);
+            days = diff + '日';
+        } else {
+            days = '—';
+        }
+        html += '<div class="alert-item alert-' + (days !== '—' && parseInt(days) > 30 ? 'danger' : 'warn') + ' deletable" data-id="' + a.id + '" style="position:relative;">';
+        html += '  <input type="checkbox">';
+        html += '  <div class="alert-days">' + days + '</div>';
+        html += '  <div>';
+        html += '    <strong>' + escHtml(a.name) + '</strong><br>';
+        html += '    <span style="font-size:12px;">' + escHtml(a.memo || '') + '</span>';
+        html += '  </div>';
+        html += '</div>';
+    });
+    container.innerHTML = html;
+}
+
+// 追加ボタンをdelete-barに自動で入れる（initAddButtonsが処理済み）ので、
+// アラート専用の追加関数を用意
+function alertAdd() {
+    var name = prompt('企業名・担当者名：');
+    if (!name || !name.trim()) return;
+    var memo = prompt('メモ（任意）：') || '';
+    var lastContact = prompt('最終連絡日（例: 2026-03-01）空欄ならなし：') || '';
+
+    var alerts = getAlerts();
+    alerts.push({
+        id: 'alert-' + Date.now(),
+        name: name.trim(),
+        memo: memo.trim(),
+        lastContact: lastContact.trim() || null,
+    });
+    saveAlerts(alerts);
+    alertRenderAll();
+}
+
+function alertDeleteChecked() {
+    var container = document.getElementById('alert-items');
+    var checked = container.querySelectorAll('.deletable input[type="checkbox"]:checked');
+    if (checked.length === 0) return;
+    var alerts = getAlerts();
+    checked.forEach(function(cb) {
+        var item = cb.closest('.deletable');
+        var id = item.getAttribute('data-id');
+        alerts = alerts.filter(function(a) { return a.id !== id; });
+        item.style.display = 'none';
+    });
+    saveAlerts(alerts);
+    alertRenderAll();
+}
+
+// 初期表示
+alertRenderAll();
 
 // ===== オンボーディング ステータス・プログレス切替 =====
 const OB_STORAGE_KEY = 'cockpit-onboard-state';
