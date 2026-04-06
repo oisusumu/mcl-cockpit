@@ -1334,13 +1334,15 @@ function alertRenderAll() {
     var html = '';
     visible.forEach(function(a) {
         var days = '';
+        var diffNum = null;
         if (a.lastContact) {
-            var diff = Math.floor((Date.now() - new Date(a.lastContact).getTime()) / 86400000);
-            days = diff + '日';
+            var dt = new Date(a.lastContact);
+            diffNum = Math.floor((Date.now() - dt.getTime()) / 86400000);
+            days = (dt.getMonth()+1) + '/' + dt.getDate() + '<br><span style="font-size:11px; opacity:0.8;">' + (diffNum >= 0 ? diffNum + '日前' : (-diffNum) + '日後') + '</span>';
         } else {
             days = '—';
         }
-        html += '<div class="alert-item alert-' + (days !== '—' && parseInt(days) > 30 ? 'danger' : 'warn') + ' deletable" data-id="' + a.id + '" style="position:relative;">';
+        html += '<div class="alert-item alert-' + (diffNum !== null && diffNum > 30 ? 'danger' : 'warn') + ' deletable" data-id="' + a.id + '" style="position:relative;">';
         html += '  <input type="checkbox">';
         html += '  <div class="alert-days">' + days + '</div>';
         html += '  <div>';
