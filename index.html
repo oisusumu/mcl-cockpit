@@ -1694,11 +1694,37 @@ async function fetchTasks() {
 }
 
 // --- Gmail取得 ---
+// 除外キーワード（件名に含まれていたら非表示）
+var MAIL_EXCLUDE_SUBJECTS = [
+    'ウェルネス', 'クーポン', '予約が完了', '予約完了',
+    'テストテスト', '電子署名リクエスト',
+    'ご案内', '勉強会のご案内',
+    '年末年始', 'お知らせ', 'ニュースレター',
+    'メルマガ', 'キャンペーン',
+];
+// 除外送信元（部分一致）
+var MAIL_EXCLUDE_FROM = [
+    'noreply', 'no-reply', 'notification', 'mailer-daemon',
+    'マイクロCTC', 'wellness',
+];
+
+function isMailExcluded(subject, from) {
+    var subLower = (subject || '').toLowerCase();
+    var fromLower = (from || '').toLowerCase();
+    for (var i = 0; i < MAIL_EXCLUDE_SUBJECTS.length; i++) {
+        if (subLower.indexOf(MAIL_EXCLUDE_SUBJECTS[i].toLowerCase()) !== -1) return true;
+    }
+    for (var j = 0; j < MAIL_EXCLUDE_FROM.length; j++) {
+        if (fromLower.indexOf(MAIL_EXCLUDE_FROM[j].toLowerCase()) !== -1) return true;
+    }
+    return false;
+}
+
 async function fetchGmail() {
     var response = await gapi.client.gmail.users.messages.list({
         userId: 'me',
         q: 'is:unread -category:promotions -category:social -category:updates',
-        maxResults: 10,
+        maxResults: 20,
     });
 
     var messages = response.result.messages || [];
@@ -1712,10 +1738,8 @@ async function fetchGmail() {
         return;
     }
 
-    countEl.textContent = messages.length + '件';
-    countEl.style.background = messages.length > 0 ? '#ef4444' : '#22c55e';
-
     var html = '';
+    var displayCount = 0;
     for (var i = 0; i < messages.length; i++) {
         var detail = await gapi.client.gmail.users.messages.get({
             userId: 'me',
@@ -1733,6 +1757,11 @@ async function fetchGmail() {
                 date = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
             }
         });
+
+        // フィルター：除外対象ならスキップ
+        if (isMailExcluded(subject, from)) continue;
+
+        displayCount++;
         html += '<div class="task" style="margin-bottom:6px;">';
         html += '  <div class="task-priority priority-high"></div>';
         html += '  <div class="task-content">';
@@ -1741,7 +1770,16 @@ async function fetchGmail() {
         html += '  </div>';
         html += '</div>';
     }
-    container.innerHTML = html;
+
+    if (displayCount === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:16px 0; color:#64748b;">対応が必要な未読メールはありません</div>';
+        countEl.textContent = '0件';
+        countEl.style.background = '#22c55e';
+    } else {
+        countEl.textContent = displayCount + '件';
+        countEl.style.background = '#ef4444';
+        container.innerHTML = html;
+    }
 }
 
 function escHtml(s) {
