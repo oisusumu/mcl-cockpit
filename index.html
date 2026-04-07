@@ -1312,6 +1312,8 @@ function changeMonth(dir) {
     months[currentIdx].classList.add('active');
     const [y, m] = list[currentIdx].split('-');
     titleEl.textContent = y + '年' + monthNames[parseInt(m) - 1];
+    // 当該月のGoogleカレンダー予定を取得（トークンがあれば）
+    if (typeof fetchMonthCalendar === 'function') fetchMonthCalendar(list[currentIdx]);
 }
 
 // ===== 削除機能 =====
@@ -2091,6 +2093,67 @@ function onTokenResponse(resp) {
     fetchAllData();
 }
 
+// --- 月間カレンダー用：指定月のGoogle予定を取得 ---
+async function fetchMonthCalendar(yearMonth) {
+    try {
+        if (!gapiReady || !gapi.client.getToken()) return;
+        var parts = yearMonth.split('-');
+        var year = parseInt(parts[0]);
+        var mon = parseInt(parts[1]);
+        var start = new Date(year, mon - 1, 1, 0, 0, 0).toISOString();
+        var end = new Date(year, mon, 0, 23, 59, 59).toISOString();
+        var resp = await gapi.client.request({
+            path: 'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+            params: {
+                timeMin: start,
+                timeMax: end,
+                singleEvents: true,
+                orderBy: 'startTime',
+                maxResults: 250,
+            },
+        });
+        var events = resp.result.items || [];
+        // 対象月コンテナ
+        var monthEl = document.querySelector('.cal-month[data-month="' + yearMonth + '"]');
+        if (!monthEl) return;
+        // 既存のGoogle由来をクリア
+        monthEl.querySelectorAll('.cal-event-gcal').forEach(function(el) { el.remove(); });
+        // 日ごとに集計
+        var byDay = {};
+        events.forEach(function(ev) {
+            var dt = ev.start && (ev.start.dateTime || ev.start.date);
+            if (!dt) return;
+            var d = new Date(dt);
+            var day = d.getDate();
+            if (!byDay[day]) byDay[day] = [];
+            byDay[day].push(ev);
+        });
+        // セルに反映
+        var cells = monthEl.querySelectorAll('.cal-cell');
+        cells.forEach(function(cell) {
+            var dateEl = cell.querySelector('.cal-date');
+            if (!dateEl) return;
+            var day = parseInt(dateEl.textContent);
+            var list = byDay[day] || [];
+            list.forEach(function(ev) {
+                var timeStr = '';
+                if (ev.start.dateTime) {
+                    var d = new Date(ev.start.dateTime);
+                    timeStr = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+                }
+                var div = document.createElement('div');
+                div.className = 'cal-event cal-event-gcal';
+                div.style.background = '#1e40af33';
+                div.style.borderLeft = '3px solid #60a5fa';
+                div.innerHTML = (timeStr ? '<span class="cal-event-time">' + timeStr + '</span> ' : '') + escHtml(ev.summary || '（無題）');
+                cell.appendChild(div);
+            });
+        });
+    } catch(e) {
+        console.error('fetchMonthCalendar failed:', e);
+    }
+}
+
 async function fetchAllData() {
     updateSyncBtn('同期中...', '#f59e0b');
     var results = await Promise.allSettled([
@@ -2111,6 +2174,11 @@ async function fetchAllData() {
     } else {
         updateSyncBtn('一部済 ' + timeStr + ' (NG:' + failed.join(',') + ')', '#f59e0b');
     }
+    // 現在表示中の月カレンダーも更新
+    try {
+        var activeMonth = document.querySelector('.cal-month.active');
+        if (activeMonth) fetchMonthCalendar(activeMonth.dataset.month);
+    } catch(e) { console.error(e); }
 }
 
 function updateSyncBtn(text, color) {
