@@ -1004,6 +1004,40 @@ body {
             </div>
         </div>
 
+        <!-- ===== パートナー管理 ===== -->
+        <div class="card grid-full">
+            <div class="card-header">
+                <h2>パートナー管理</h2>
+                <span style="font-size:11px; color:#64748b;">見込み → リマインド → 確定パートナー</span>
+            </div>
+            <div class="pipeline-grid" id="pt-pipeline">
+                <div class="pipeline-col pipeline-col-prospect" data-stage="partner">
+                    <div class="pipeline-col-header">
+                        <div class="pipeline-col-title">パートナー</div>
+                        <div class="pipeline-col-count" id="pt-count-partner">0</div>
+                    </div>
+                    <div class="pipeline-items" id="pt-items-partner"></div>
+                    <button class="btn-add" style="width:100%; margin-top:8px;" onclick="ptAddPrompt('partner')">＋ 追加</button>
+                </div>
+                <div class="pipeline-col pipeline-col-active" data-stage="remind">
+                    <div class="pipeline-col-header">
+                        <div class="pipeline-col-title">リマインド連絡</div>
+                        <div class="pipeline-col-count" id="pt-count-remind">0</div>
+                    </div>
+                    <div class="pipeline-items" id="pt-items-remind"></div>
+                    <button class="btn-add" style="width:100%; margin-top:8px;" onclick="ptAddPrompt('remind')">＋ 追加</button>
+                </div>
+                <div class="pipeline-col pipeline-col-done" data-stage="lead">
+                    <div class="pipeline-col-header">
+                        <div class="pipeline-col-title">パートナー見込み</div>
+                        <div class="pipeline-col-count" id="pt-count-lead">0</div>
+                    </div>
+                    <div class="pipeline-items" id="pt-items-lead"></div>
+                    <button class="btn-add" style="width:100%; margin-top:8px;" onclick="ptAddPrompt('lead')">＋ 追加</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ===== 中期方向性 ===== -->
         <div class="card grid-full" id="direction-card">
             <div class="card-header">
@@ -1683,6 +1717,108 @@ function dcDelete(itemId, stage) {
 
 // 初期表示
 dcRenderAll();
+
+// ===== パートナー管理 =====
+const PT_STORAGE_KEY = 'cockpit-partner';
+const PT_STAGES = ['partner', 'remind', 'lead'];
+const PT_STAGE_NAMES = { partner: 'パートナー', remind: 'リマインド連絡', lead: 'パートナー見込み' };
+
+function getPtData() {
+    try { return JSON.parse(localStorage.getItem(PT_STORAGE_KEY) || '{"partner":[],"remind":[],"lead":[]}'); }
+    catch { return { partner: [], remind: [], lead: [] }; }
+}
+function savePtData(data) { localStorage.setItem(PT_STORAGE_KEY, JSON.stringify(data)); }
+
+function ptRenderAll() {
+    var data = getPtData();
+    PT_STAGES.forEach(function(stage) {
+        var container = document.getElementById('pt-items-' + stage);
+        var countEl = document.getElementById('pt-count-' + stage);
+        if (!container) return;
+        container.innerHTML = '';
+        var items = data[stage] || [];
+        countEl.textContent = items.length;
+        items.forEach(function(item) { container.appendChild(ptCreateCard(item, stage)); });
+    });
+}
+
+function ptCreateCard(item, stage) {
+    var div = document.createElement('div');
+    div.className = 'pipeline-item';
+    div.setAttribute('data-pt-id', item.id);
+
+    var nameDiv = document.createElement('div');
+    nameDiv.className = 'pipeline-item-name';
+    nameDiv.textContent = item.name;
+    div.appendChild(nameDiv);
+
+    if (item.memo) {
+        var metaDiv = document.createElement('div');
+        metaDiv.className = 'pipeline-item-meta';
+        metaDiv.textContent = item.memo;
+        div.appendChild(metaDiv);
+    }
+
+    var actions = document.createElement('div');
+    actions.className = 'pipeline-item-actions';
+
+    var stageIdx = PT_STAGES.indexOf(stage);
+    if (stageIdx > 0) {
+        var leftBtn = document.createElement('button');
+        leftBtn.className = 'pipe-btn-left';
+        leftBtn.textContent = '← ' + PT_STAGE_NAMES[PT_STAGES[stageIdx - 1]];
+        leftBtn.onclick = function() { ptMove(item.id, stage, PT_STAGES[stageIdx - 1]); };
+        actions.appendChild(leftBtn);
+    }
+    if (stageIdx < PT_STAGES.length - 1) {
+        var rightBtn = document.createElement('button');
+        rightBtn.className = 'pipe-btn-right';
+        rightBtn.textContent = PT_STAGE_NAMES[PT_STAGES[stageIdx + 1]] + ' →';
+        rightBtn.onclick = function() { ptMove(item.id, stage, PT_STAGES[stageIdx + 1]); };
+        actions.appendChild(rightBtn);
+    }
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'pipe-btn-del';
+    delBtn.textContent = '削除';
+    delBtn.onclick = function() { ptDelete(item.id, stage); };
+    actions.appendChild(delBtn);
+
+    div.appendChild(actions);
+    return div;
+}
+
+function ptAddPrompt(stage) {
+    var name = prompt('パートナー名を入力：');
+    if (!name || !name.trim()) return;
+    var memo = prompt('メモ（任意）：') || '';
+    var data = getPtData();
+    data[stage].push({ id: 'pt-' + Date.now(), name: name.trim(), memo: memo.trim() });
+    savePtData(data);
+    ptRenderAll();
+}
+
+function ptMove(itemId, fromStage, toStage) {
+    var data = getPtData();
+    var idx = -1;
+    for (var i = 0; i < data[fromStage].length; i++) {
+        if (data[fromStage][i].id === itemId) { idx = i; break; }
+    }
+    if (idx === -1) return;
+    var item = data[fromStage].splice(idx, 1)[0];
+    data[toStage].push(item);
+    savePtData(data);
+    ptRenderAll();
+}
+
+function ptDelete(itemId, stage) {
+    var data = getPtData();
+    data[stage] = data[stage].filter(function(it) { return it.id !== itemId; });
+    savePtData(data);
+    ptRenderAll();
+}
+
+ptRenderAll();
 
 // ===== Google API 連携 =====
 const CLIENT_ID = '281223233513-ot2g8g4fphkqg9768j41li61fopu2asu.apps.googleusercontent.com';
