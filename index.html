@@ -515,6 +515,143 @@ body {
     .card { background: #f8fafc; border: 1px solid #ddd; }
     .header { background: #1e293b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ====== 飛行機コックピット風HUDテーマ ====== */
+body {
+    background:
+        radial-gradient(ellipse at top, #0a1520 0%, #050a10 60%, #000 100%);
+    background-attachment: fixed;
+    position: relative;
+}
+body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+        linear-gradient(rgba(56,189,248,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56,189,248,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+}
+body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,0) 0px,
+        rgba(0,0,0,0) 3px,
+        rgba(0,255,200,0.025) 3px,
+        rgba(0,255,200,0.025) 4px);
+    pointer-events: none;
+    z-index: 1;
+}
+.dashboard { position: relative; z-index: 2; }
+
+.header {
+    background: linear-gradient(180deg, #0b1a2a 0%, #071018 100%) !important;
+    border: 1px solid #1e3a5f !important;
+    box-shadow:
+        inset 0 1px 0 rgba(96,165,250,0.3),
+        inset 0 -2px 8px rgba(0,0,0,0.8),
+        0 0 24px rgba(56,189,248,0.15);
+    border-radius: 6px !important;
+    position: relative;
+}
+.header::before {
+    content: '● SYS ONLINE';
+    position: absolute; top: 6px; left: 12px;
+    font-size: 9px; color: #10b981;
+    letter-spacing: 2px; font-family: 'Consolas', monospace;
+    text-shadow: 0 0 6px #10b981;
+}
+.header::after {
+    content: 'MCL-COCKPIT v1.0';
+    position: absolute; top: 6px; right: 12px;
+    font-size: 9px; color: #64748b;
+    letter-spacing: 2px; font-family: 'Consolas', monospace;
+}
+.header h1 {
+    font-family: 'Consolas', monospace;
+    color: #7dd3fc !important;
+    text-shadow: 0 0 10px rgba(125,211,252,0.6);
+    letter-spacing: 1px;
+}
+.header h1 span { color: #fbbf24 !important; text-shadow: 0 0 8px rgba(251,191,36,0.6); }
+.header-meta .date { color: #7dd3fc; font-family: 'Consolas', monospace; text-shadow: 0 0 6px rgba(125,211,252,0.5); }
+
+.card {
+    background: linear-gradient(180deg, #0c1a2b 0%, #07111c 100%) !important;
+    border: 1px solid #1e3a5f !important;
+    border-radius: 6px !important;
+    box-shadow:
+        inset 0 1px 0 rgba(96,165,250,0.25),
+        inset 0 0 40px rgba(0,20,40,0.6),
+        0 0 18px rgba(56,189,248,0.08),
+        0 4px 12px rgba(0,0,0,0.6);
+    position: relative;
+}
+.card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+    opacity: 0.6;
+}
+.card::after {
+    content: '';
+    position: absolute; top: 4px; right: 8px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    animation: hudBlink 2s ease-in-out infinite;
+}
+@keyframes hudBlink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+.card h2, .card h3 {
+    font-family: 'Consolas', monospace !important;
+    color: #7dd3fc !important;
+    text-shadow: 0 0 6px rgba(125,211,252,0.5);
+    letter-spacing: 1px;
+    border-bottom: 1px solid #1e3a5f;
+    padding-bottom: 6px;
+}
+
+button, .btn {
+    font-family: 'Consolas', monospace !important;
+    letter-spacing: 1px;
+    border: 1px solid #1e3a5f !important;
+    background: linear-gradient(180deg, #0f2540, #071018) !important;
+    color: #7dd3fc !important;
+    text-shadow: 0 0 4px rgba(125,211,252,0.4);
+    box-shadow: inset 0 1px 0 rgba(96,165,250,0.2);
+    border-radius: 3px !important;
+}
+button:hover { box-shadow: 0 0 12px rgba(56,189,248,0.4), inset 0 1px 0 rgba(96,165,250,0.3) !important; }
+
+/* 警告灯スタイル（alert系） */
+.alert, .warning, [class*="alert"] {
+    animation: hudWarn 1.5s ease-in-out infinite;
+}
+@keyframes hudWarn {
+    0%,100% { box-shadow: 0 0 8px rgba(251,191,36,0.4); }
+    50% { box-shadow: 0 0 20px rgba(251,191,36,0.8); }
+}
+
+/* カレンダーグリッドを計器風に */
+.cal-grid, .pipeline-grid {
+    border: 1px solid #1e3a5f;
+    background: rgba(0,20,40,0.3);
+}
+.cal-cell {
+    border: 1px solid #1e3a5f !important;
+    background: rgba(7,17,28,0.6) !important;
+}
+.cal-cell:hover { background: rgba(56,189,248,0.08) !important; }
+
+/* スクロールバーHUD風 */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #050a10; }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #1e3a5f, #0f2540); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
 </style>
 </head>
 <body>
