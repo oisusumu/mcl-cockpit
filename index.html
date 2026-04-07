@@ -889,8 +889,27 @@ body {
                 <h2>本日のアポ・会議</h2>
                 <span class="count" id="appo-count">—</span>
             </div>
+            <div style="display:flex; gap:8px; margin-bottom:8px; justify-content:flex-end; flex-wrap:wrap;">
+                <button onclick="appoMoveToCarry()" style="background:#f59e0b; color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer;">未完了へ移動</button>
+                <button onclick="appoDeleteChecked()" style="background:#ef4444; color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer;">チェック項目を完了削除</button>
+            </div>
             <div id="appo-live" style="font-size:13px; color:#64748b; text-align:center; padding:16px 0;">
                 予定なし（Google同期ボタンで取得）
+            </div>
+        </div>
+
+        <!-- ===== 未完了タスク（繰越） ===== -->
+        <div class="card">
+            <div class="card-header">
+                <h2>未完了タスク（繰越）</h2>
+                <span class="count" id="carry-count" style="background:#f59e0b;">0件</span>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:8px; justify-content:flex-end;">
+                <button onclick="carryAdd()" style="background:#3b82f6; color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer;">＋ 追加</button>
+                <button onclick="carryDeleteChecked()" style="background:#ef4444; color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer;">チェック項目を削除</button>
+            </div>
+            <div id="carry-items" style="font-size:13px; color:#64748b; text-align:center; padding:16px 0;">
+                未完了タスクはありません
             </div>
         </div>
 
@@ -1800,7 +1819,11 @@ async function fetchCalendarEvents() {
     countEl.style.background = '#3b82f6';
 
     var html = '';
+    var hidden = getAppoHidden();
+    var visibleCount = 0;
     events.forEach(function(ev) {
+        if (hidden.indexOf(ev.id) !== -1) return;
+        visibleCount++;
         var timeStr = '';
         if (ev.start.dateTime) {
             var d = new Date(ev.start.dateTime);
@@ -1809,7 +1832,8 @@ async function fetchCalendarEvents() {
             timeStr = '終日';
         }
         var title = ev.summary || '（タイトルなし）';
-        html += '<div class="task" style="margin-bottom:6px;">';
+        html += '<div class="task deletable" data-appo-id="' + escHtml(ev.id) + '" data-title="' + escHtml(title) + '" data-time="' + escHtml(timeStr) + '" style="margin-bottom:6px; display:flex; align-items:center;">';
+        html += '  <input type="checkbox" style="margin-right:8px;">';
         html += '  <div class="task-priority priority-mid"></div>';
         html += '  <div class="task-content">';
         html += '    <div class="task-title">' + escHtml(title) + '</div>';
@@ -1817,8 +1841,104 @@ async function fetchCalendarEvents() {
         html += '  </div>';
         html += '</div>';
     });
+    countEl.textContent = visibleCount + '件';
+    countEl.style.background = visibleCount > 0 ? '#3b82f6' : '#22c55e';
+    container.innerHTML = html || '<div style="text-align:center; padding:16px 0; color:#64748b;">本日の予定はありません</div>';
+}
+
+// --- アポ非表示・未完了繰越 ---
+var APPO_HIDDEN_KEY = 'cockpit-appo-hidden';
+var CARRY_KEY = 'cockpit-carry';
+function getAppoHidden() { try { return JSON.parse(localStorage.getItem(APPO_HIDDEN_KEY) || '[]'); } catch(e) { return []; } }
+function saveAppoHidden(a) { localStorage.setItem(APPO_HIDDEN_KEY, JSON.stringify(a)); }
+function getCarry() { try { return JSON.parse(localStorage.getItem(CARRY_KEY) || '[]'); } catch(e) { return []; } }
+function saveCarry(a) { localStorage.setItem(CARRY_KEY, JSON.stringify(a)); }
+
+function appoDeleteChecked() {
+    var checked = document.querySelectorAll('#appo-live .deletable input[type="checkbox"]:checked');
+    if (checked.length === 0) { alert('チェックされた項目がありません'); return; }
+    var hidden = getAppoHidden();
+    checked.forEach(function(cb) {
+        var id = cb.closest('.deletable').getAttribute('data-appo-id');
+        if (id && hidden.indexOf(id) === -1) hidden.push(id);
+        cb.closest('.deletable').remove();
+    });
+    saveAppoHidden(hidden);
+    var remaining = document.querySelectorAll('#appo-live .deletable').length;
+    var countEl = document.getElementById('appo-count');
+    countEl.textContent = remaining + '件';
+    countEl.style.background = remaining > 0 ? '#3b82f6' : '#22c55e';
+}
+
+function appoMoveToCarry() {
+    var checked = document.querySelectorAll('#appo-live .deletable input[type="checkbox"]:checked');
+    if (checked.length === 0) { alert('チェックされた項目がありません'); return; }
+    var hidden = getAppoHidden();
+    var carry = getCarry();
+    checked.forEach(function(cb) {
+        var el = cb.closest('.deletable');
+        var id = el.getAttribute('data-appo-id');
+        var title = el.getAttribute('data-title');
+        var time = el.getAttribute('data-time');
+        if (id && hidden.indexOf(id) === -1) hidden.push(id);
+        carry.push({ id: 'carry-' + Date.now() + '-' + Math.random().toString(36).slice(2,6), title: title, meta: time + ' から繰越', created: new Date().toISOString() });
+        el.remove();
+    });
+    saveAppoHidden(hidden);
+    saveCarry(carry);
+    carryRender();
+    var remaining = document.querySelectorAll('#appo-live .deletable').length;
+    var countEl = document.getElementById('appo-count');
+    countEl.textContent = remaining + '件';
+    countEl.style.background = remaining > 0 ? '#3b82f6' : '#22c55e';
+}
+
+function carryRender() {
+    var items = getCarry();
+    var container = document.getElementById('carry-items');
+    var countEl = document.getElementById('carry-count');
+    if (!container) return;
+    countEl.textContent = items.length + '件';
+    countEl.style.background = items.length > 0 ? '#f59e0b' : '#22c55e';
+    if (items.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:16px 0; color:#64748b;">未完了タスクはありません</div>';
+        return;
+    }
+    var html = '';
+    items.forEach(function(it) {
+        html += '<div class="task deletable" data-carry-id="' + escHtml(it.id) + '" style="margin-bottom:6px; display:flex; align-items:center;">';
+        html += '  <input type="checkbox" style="margin-right:8px;">';
+        html += '  <div class="task-priority priority-high"></div>';
+        html += '  <div class="task-content">';
+        html += '    <div class="task-title">' + escHtml(it.title) + '</div>';
+        html += '    <div class="task-meta">' + escHtml(it.meta || '繰越') + '</div>';
+        html += '  </div>';
+        html += '</div>';
+    });
     container.innerHTML = html;
 }
+
+function carryAdd() {
+    var title = prompt('タスク内容：');
+    if (!title || !title.trim()) return;
+    var carry = getCarry();
+    carry.push({ id: 'carry-' + Date.now(), title: title.trim(), meta: '手動追加', created: new Date().toISOString() });
+    saveCarry(carry);
+    carryRender();
+}
+
+function carryDeleteChecked() {
+    var checked = document.querySelectorAll('#carry-items .deletable input[type="checkbox"]:checked');
+    if (checked.length === 0) { alert('チェックされた項目がありません'); return; }
+    var ids = [];
+    checked.forEach(function(cb) { ids.push(cb.closest('.deletable').getAttribute('data-carry-id')); });
+    var carry = getCarry().filter(function(it) { return ids.indexOf(it.id) === -1; });
+    saveCarry(carry);
+    carryRender();
+}
+
+// 初期レンダー
+if (document.getElementById('carry-items')) carryRender();
 
 // --- タスク取得 ---
 async function fetchTasks() {
