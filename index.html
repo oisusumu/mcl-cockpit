@@ -1928,7 +1928,9 @@ function ptCreateCard(item, stage) {
 
     var nameDiv = document.createElement('div');
     nameDiv.className = 'pipeline-item-name';
-    nameDiv.textContent = item.name;
+    var level = typeof item.level === 'number' ? item.level : 0;
+    var stars = '★★★'.slice(0, level) + '☆☆☆'.slice(0, 3 - level);
+    nameDiv.innerHTML = '<span style="color:#fbbf24; margin-right:6px;">' + stars + '</span>' + escHtml(item.name);
     div.appendChild(nameDiv);
 
     if (item.memo) {
@@ -1977,8 +1979,12 @@ function ptAddPrompt(stage) {
     var name = prompt('パートナー名を入力：');
     if (!name || !name.trim()) return;
     var memo = prompt('メモ（任意）：') || '';
+    var levelStr = prompt('パートナーレベル（★の数 0〜3）：', '0');
+    var level = parseInt(levelStr);
+    if (isNaN(level) || level < 0) level = 0;
+    if (level > 3) level = 3;
     var data = getPtData();
-    data[stage].push({ id: 'pt-' + Date.now(), name: name.trim(), memo: memo.trim() });
+    data[stage].push({ id: 'pt-' + Date.now(), name: name.trim(), memo: memo.trim(), level: level });
     savePtData(data);
     ptRenderAll();
 }
@@ -2005,8 +2011,14 @@ function ptEdit(itemId, stage) {
     if (!name.trim()) return;
     var memo = prompt('メモ：', item.memo || '');
     if (memo === null) return;
+    var levelStr = prompt('パートナーレベル（★の数 0〜3）：', String(item.level || 0));
+    if (levelStr === null) return;
+    var level = parseInt(levelStr);
+    if (isNaN(level) || level < 0) level = 0;
+    if (level > 3) level = 3;
     item.name = name.trim();
     item.memo = memo.trim();
+    item.level = level;
     savePtData(data);
     ptRenderAll();
 }
