@@ -1405,10 +1405,11 @@ function alertRenderAll() {
         html += '<div class="alert-item alert-' + (diffNum !== null && diffNum > 30 ? 'danger' : 'warn') + ' deletable" data-id="' + a.id + '" style="position:relative;">';
         html += '  <input type="checkbox">';
         html += '  <div class="alert-days">' + days + '</div>';
-        html += '  <div>';
+        html += '  <div style="flex:1;">';
         html += '    <strong>' + escHtml(a.name) + '</strong><br>';
         html += '    <span style="font-size:12px;">' + escHtml(a.memo || '') + '</span>';
         html += '  </div>';
+        html += '  <button onclick="alertEdit(\'' + a.id + '\')" style="background:#334155; color:#cbd5e1; border:1px solid #475569; padding:2px 8px; border-radius:4px; font-size:11px; cursor:pointer; margin-left:8px;">編集</button>';
         html += '</div>';
     });
     container.innerHTML = html;
@@ -1429,6 +1430,24 @@ function alertAdd() {
         memo: memo.trim(),
         lastContact: lastContact.trim() || null,
     });
+    saveAlerts(alerts);
+    alertRenderAll();
+}
+
+function alertEdit(id) {
+    var alerts = getAlerts();
+    var a = alerts.find(function(x) { return x.id === id; });
+    if (!a) return;
+    var name = prompt('企業名・担当者名：', a.name);
+    if (name === null) return;
+    if (!name.trim()) return;
+    var memo = prompt('メモ：', a.memo || '');
+    if (memo === null) return;
+    var lastContact = prompt('最終連絡日（例: 2026-03-01）空欄ならなし：', a.lastContact || '');
+    if (lastContact === null) return;
+    a.name = name.trim();
+    a.memo = memo.trim();
+    a.lastContact = lastContact.trim() || null;
     saveAlerts(alerts);
     alertRenderAll();
 }
