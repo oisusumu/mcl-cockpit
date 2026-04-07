@@ -1675,6 +1675,12 @@ function dcCreateCard(item, stage) {
         actions.appendChild(rightBtn);
     }
 
+    var editBtn = document.createElement('button');
+    editBtn.className = 'pipe-btn-left';
+    editBtn.textContent = '編集';
+    editBtn.onclick = function() { dcEdit(item.id, stage); };
+    actions.appendChild(editBtn);
+
     var delBtn = document.createElement('button');
     delBtn.className = 'pipe-btn-del';
     delBtn.textContent = '削除';
@@ -1683,6 +1689,21 @@ function dcCreateCard(item, stage) {
 
     div.appendChild(actions);
     return div;
+}
+
+function dcEdit(itemId, stage) {
+    var data = getDcData();
+    var item = data[stage].find(function(it) { return it.id === itemId; });
+    if (!item) return;
+    var name = prompt('企業名：', item.name);
+    if (name === null) return;
+    if (!name.trim()) return;
+    var memo = prompt('メモ：', item.memo || '');
+    if (memo === null) return;
+    item.name = name.trim();
+    item.memo = memo.trim();
+    saveDcData(data);
+    dcRenderAll();
 }
 
 function dcAddPrompt(stage) {
@@ -1778,6 +1799,12 @@ function ptCreateCard(item, stage) {
         actions.appendChild(rightBtn);
     }
 
+    var editBtn = document.createElement('button');
+    editBtn.className = 'pipe-btn-left';
+    editBtn.textContent = '編集';
+    editBtn.onclick = function() { ptEdit(item.id, stage); };
+    actions.appendChild(editBtn);
+
     var delBtn = document.createElement('button');
     delBtn.className = 'pipe-btn-del';
     delBtn.textContent = '削除';
@@ -1807,6 +1834,21 @@ function ptMove(itemId, fromStage, toStage) {
     if (idx === -1) return;
     var item = data[fromStage].splice(idx, 1)[0];
     data[toStage].push(item);
+    savePtData(data);
+    ptRenderAll();
+}
+
+function ptEdit(itemId, stage) {
+    var data = getPtData();
+    var item = data[stage].find(function(it) { return it.id === itemId; });
+    if (!item) return;
+    var name = prompt('パートナー名：', item.name);
+    if (name === null) return;
+    if (!name.trim()) return;
+    var memo = prompt('メモ：', item.memo || '');
+    if (memo === null) return;
+    item.name = name.trim();
+    item.memo = memo.trim();
     savePtData(data);
     ptRenderAll();
 }
