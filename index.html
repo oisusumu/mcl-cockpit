@@ -1044,13 +1044,14 @@ body {
             <div class="onboard-item deletable" data-id="onboard-iwakura">
                 <input type="checkbox">
                 <div class="onboard-header">
-                    <div class="onboard-name">岩倉さん</div>
+                    <div class="onboard-name" data-edit-name="iwakura">岩倉さん</div>
                     <span class="onboard-status status-active" data-onboard-id="iwakura" onclick="cycleStatus(this)" style="cursor:pointer;" title="クリックで変更">進行中</span>
+                    <button onclick="onboardEdit('iwakura')" style="background:#334155; color:#cbd5e1; border:1px solid #475569; padding:2px 8px; border-radius:4px; font-size:11px; cursor:pointer; margin-left:8px;">編集</button>
                 </div>
                 <div class="onboard-progress" data-onboard-id="iwakura" onclick="cycleProgress(this)" style="cursor:pointer;" title="クリックで変更">
                     <div class="onboard-bar" style="width:20%;"></div>
                 </div>
-                <div class="onboard-detail">
+                <div class="onboard-detail" data-edit-detail="iwakura">
                     定期打ち合わせ実施済み。オンボーディング計画を丁寧に進める。<br>
                     「落とさないスケジュール管理を徹底」「すごく重要」
                 </div>
@@ -1059,18 +1060,52 @@ body {
             <div class="onboard-item deletable" data-id="onboard-general">
                 <input type="checkbox">
                 <div class="onboard-header">
-                    <div class="onboard-name">新規顧問先（全般）</div>
+                    <div class="onboard-name" data-edit-name="general">新規顧問先（全般）</div>
                     <span class="onboard-status status-planned" data-onboard-id="general" onclick="cycleStatus(this)" style="cursor:pointer;" title="クリックで変更">継続</span>
+                    <button onclick="onboardEdit('general')" style="background:#334155; color:#cbd5e1; border:1px solid #475569; padding:2px 8px; border-radius:4px; font-size:11px; cursor:pointer; margin-left:8px;">編集</button>
                 </div>
                 <div class="onboard-progress" data-onboard-id="general" onclick="cycleProgress(this)" style="cursor:pointer;" title="クリックで変更">
                     <div class="onboard-bar" style="width:50%;"></div>
                 </div>
-                <div class="onboard-detail">
+                <div class="onboard-detail" data-edit-detail="general">
                     データベースの整備・育成を進める。<br>
                     いろんなところのオンボーディングがあるので丁寧にやっていく。
                 </div>
             </div>
         </div>
+
+        <script>
+        // オンボーディング編集機能
+        var ONBOARD_EDIT_KEY = 'cockpit-onboard-edits';
+        function getOnboardEdits() { try { return JSON.parse(localStorage.getItem(ONBOARD_EDIT_KEY) || '{}'); } catch(e) { return {}; } }
+        function saveOnboardEdits(o) { localStorage.setItem(ONBOARD_EDIT_KEY, JSON.stringify(o)); }
+        function applyOnboardEdits() {
+            var edits = getOnboardEdits();
+            Object.keys(edits).forEach(function(id) {
+                var e = edits[id];
+                var nameEl = document.querySelector('[data-edit-name="' + id + '"]');
+                var detailEl = document.querySelector('[data-edit-detail="' + id + '"]');
+                if (nameEl && e.name !== undefined) nameEl.textContent = e.name;
+                if (detailEl && e.detail !== undefined) detailEl.innerHTML = e.detail.replace(/\n/g, '<br>');
+            });
+        }
+        function onboardEdit(id) {
+            var nameEl = document.querySelector('[data-edit-name="' + id + '"]');
+            var detailEl = document.querySelector('[data-edit-detail="' + id + '"]');
+            var curName = nameEl ? nameEl.textContent : '';
+            var curDetail = detailEl ? detailEl.innerHTML.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '') : '';
+            var name = prompt('名称：', curName);
+            if (name === null) return;
+            if (!name.trim()) return;
+            var detail = prompt('詳細（改行可）：', curDetail);
+            if (detail === null) return;
+            var edits = getOnboardEdits();
+            edits[id] = { name: name.trim(), detail: detail };
+            saveOnboardEdits(edits);
+            applyOnboardEdits();
+        }
+        applyOnboardEdits();
+        </script>
 
         <!-- ===== DCパイプライン ===== -->
         <div class="card grid-full">
