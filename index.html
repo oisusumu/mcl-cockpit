@@ -1268,6 +1268,26 @@ function changeMonth(dir) {
 // 初期描画
 renderMonth(currentMonth);
 
+// --- Google Tasks / アポ欄をlocalStorageから即復元 ---
+(function restoreLiveSections() {
+    try {
+        var tasksHtml = localStorage.getItem('cockpit-tasks-html');
+        if (tasksHtml) {
+            var ts = document.getElementById('tasks-live');
+            if (ts) ts.innerHTML = tasksHtml;
+        }
+        var appoHtml = localStorage.getItem('cockpit-appo-html');
+        if (appoHtml) {
+            var as = document.getElementById('appo-live');
+            if (as) as.innerHTML = appoHtml;
+            var cnt = document.getElementById('appo-count');
+            var savedCnt = localStorage.getItem('cockpit-appo-count');
+            var savedCol = localStorage.getItem('cockpit-appo-color');
+            if (cnt && savedCnt) { cnt.textContent = savedCnt; if (savedCol) cnt.style.background = savedCol; }
+        }
+    } catch(e) {}
+})();
+
 // ===== 削除機能 =====
 const STORAGE_KEY = 'cockpit-deleted';
 
@@ -2212,6 +2232,7 @@ async function fetchCalendarEvents() {
     countEl.textContent = visibleCount + '件';
     countEl.style.background = visibleCount > 0 ? '#3b82f6' : '#22c55e';
     container.innerHTML = html || '<div style="text-align:center; padding:16px 0; color:#64748b;">本日の予定はありません</div>';
+    try { localStorage.setItem('cockpit-appo-html', container.innerHTML); localStorage.setItem('cockpit-appo-count', countEl.textContent); localStorage.setItem('cockpit-appo-color', countEl.style.background); } catch(e) {}
 }
 
 // --- アポ非表示・未完了繰越 ---
@@ -2359,6 +2380,7 @@ async function fetchTasks() {
         html += '</div>';
     });
     section.innerHTML = html;
+    try { localStorage.setItem('cockpit-tasks-html', html); } catch(e) {}
 }
 
 // --- Gmail取得 ---
