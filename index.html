@@ -1215,7 +1215,7 @@ button:hover { box-shadow: 0 0 12px rgba(56,189,248,0.4), inset 0 1px 0 rgba(96,
 const GAS_CALENDAR_API = 'https://script.google.com/macros/s/AKfycbwBxNB_guJ8n9dJWgYbBGyAsI32tf3tsyh_y9pxyOJPysj5L-3EODB1sggSVvOjKYF_/exec';
 const titleEl = document.getElementById('calTitle');
 const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-const CAL_CACHE_KEY = 'cockpit-cal-cache-v1';
+const CAL_CACHE_KEY = 'cockpit-cal-cache-v2';
 const CAL_CACHE_TTL = 30 * 60 * 1000; // 30分
 function loadCalCache() { try { return JSON.parse(localStorage.getItem(CAL_CACHE_KEY) || '{}'); } catch(e) { return {}; } }
 function saveCalCache(c) { try { localStorage.setItem(CAL_CACHE_KEY, JSON.stringify(c)); } catch(e) {} }
