@@ -2152,7 +2152,7 @@ async function fetchMonthCalendar(yearMonth) {
         var start = new Date(year, mon - 1, 1, 0, 0, 0).toISOString();
         var end = new Date(year, mon, 0, 23, 59, 59).toISOString();
         var resp = await gapi.client.request({
-            path: 'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+            path: 'https://www.googleapis.com/calendar/v3/calendars/c_82f65283e176554da447764f1f2168a162500c91f0966b2ad1668fad40524394%40group.calendar.google.com/events',
             params: {
                 timeMin: start,
                 timeMax: end,
@@ -2245,7 +2245,7 @@ async function fetchCalendarEvents() {
     var endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
 
     var response = await gapi.client.request({
-        path: 'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+        path: 'https://www.googleapis.com/calendar/v3/calendars/c_82f65283e176554da447764f1f2168a162500c91f0966b2ad1668fad40524394%40group.calendar.google.com/events',
         params: {
             timeMin: startOfDay,
             timeMax: endOfDay,
